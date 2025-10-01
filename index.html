@@ -65,6 +65,11 @@
             font-size: 1.5em;
             color: var(--primary-color);
         }
+        #table-number-display {
+            font-size: 0.8em;
+            color: #555;
+            font-weight: 500;
+        }
 
         .menu-container {
             display: flex;
@@ -221,6 +226,24 @@
             transform: translateY(0);
         }
 
+        #view-order-btn {
+            background: #fff;
+            color: var(--primary-color);
+            border: none;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: 700;
+            cursor: pointer;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+
         /* --- Modals --- */
         .modal-overlay {
             position: absolute;
@@ -296,14 +319,16 @@
 
     <div class="phone-wrapper">
         <div class="app-container">
-            <header class="header"><h1>Our Menu</h1></header>
+            <header class="header">
+                <h1>Our Menu <span id="table-number-display"></span></h1>
+            </header>
             <div class="menu-container">
                 <aside class="category-list"><ul id="category-list-ul"></ul></aside>
                 <main class="item-list" id="item-list-main"></main>
             </div>
             <div class="cart-summary" id="cart-summary-bar">
                 <div><span id="cart-item-count">0 Items</span> | ₹<span id="cart-total-price">0</span></div>
-                <button id="view-order-btn" style="background: transparent; border: none; color: white; font-weight: 700;">View Order</button>
+                <button id="view-order-btn">View Order</button>
             </div>
         </div>
 
@@ -318,6 +343,9 @@
                     <span class="close-btn" id="close-cart-modal">&times;</span>
                 </div>
                 <div class="modal-body" id="cart-modal-body"></div>
+                <div style="padding: 0 20px 15px 20px;">
+                    <textarea id="general-instructions" class="instructions" placeholder="Any general instructions for the whole order? (e.g., less spicy)"></textarea>
+                </div>
                 <div class="modal-footer" id="cart-modal-footer">
                     <button id="send-whatsapp-btn" style="background: #25D366; color: white; border: none; padding: 12px 25px; border-radius: 25px; font-weight: 700; cursor: pointer; font-size: 1em;">
                         Send Order on WhatsApp
@@ -337,6 +365,7 @@
         let currentItemForModal = null;
         let editingCartItemIndex = null;
         let activeCategory = null;
+        let tableNumber = null;
         
         const categoryListUl = document.getElementById('category-list-ul');
         const itemListMain = document.getElementById('item-list-main');
@@ -352,6 +381,15 @@
         const closeCartModalBtn = document.getElementById('close-cart-modal');
         const sendWhatsappBtn = document.getElementById('send-whatsapp-btn');
         const viewOrderBtn = document.getElementById('view-order-btn');
+
+        function getTableNumberFromURL() {
+            const params = new URLSearchParams(window.location.search);
+            const table = params.get('table');
+            if (table && !isNaN(table)) {
+                tableNumber = table;
+                document.getElementById('table-number-display').textContent = `- Table ${tableNumber}`;
+            }
+        }
 
         function getAttributeClass(attribute) {
             if (!attribute) return '';
@@ -419,7 +457,6 @@
                 itemListMain.appendChild(itemCard);
             });
             
-            // Add event listeners after rendering
             itemListMain.querySelectorAll('.add-button').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     const itemName = e.target.dataset.itemName;
@@ -427,7 +464,6 @@
                     if (item.Addon_Group_Name) {
                         openCustomizationModal(item);
                     } else {
-                        // Directly add to cart if no addons
                         cart.push({ ...item, quantity: 1, selectedAddons: [], instructions: '', totalPrice: item.Price });
                         updateCartSummary();
                         renderItems(activeCategory);
@@ -469,9 +505,7 @@
         function openCustomizationModal(item, cartIndex = null) {
             currentItemForModal = item;
             editingCartItemIndex = cartIndex;
-            
             const existingItem = (cartIndex !== null) ? cart[cartIndex] : null;
-
             const relevantAddons = addons.filter(addon => addon.Addon_Group_Name === item.Addon_Group_Name);
             const addonGroups = {};
             relevantAddons.forEach(addon => {
@@ -480,7 +514,6 @@
                 }
                 addonGroups[addon.Addon_Group_Name].items.push(addon);
             });
-            
             let addonHtml = '';
             for (const groupName in addonGroups) {
                 const group = addonGroups[groupName];
@@ -497,7 +530,6 @@
                 });
                 addonHtml += `</div>`;
             }
-
             custModalContent.innerHTML = `
                 <div class="modal-header">
                     <div class="modal-item-name">${item.Name}</div>
@@ -516,10 +548,8 @@
                     <button class="add-to-cart-btn" id="add-to-cart-btn">${editingCartItemIndex !== null ? 'Update Item' : 'Add Item'}</button>
                 </div>
             `;
-            
             custModalOverlay.classList.add('visible');
-            updateModalPrice(); // Initial price calculation
-            
+            updateModalPrice();
             document.getElementById('decrease-qty').addEventListener('click', () => updateQuantity(-1));
             document.getElementById('increase-qty').addEventListener('click', () => updateQuantity(1));
             document.getElementById('add-to-cart-btn').addEventListener('click', saveItemToCart);
@@ -562,15 +592,12 @@
             const basePrice = currentItemForModal.Price;
             const addonsTotalPrice = selectedAddons.reduce((sum, addon) => sum + addon.price, 0);
             const itemTotalPrice = (basePrice + addonsTotalPrice) * quantity;
-
             const cartItem = { ...currentItemForModal, selectedAddons, quantity, instructions, totalPrice: itemTotalPrice };
-
             if (editingCartItemIndex !== null) {
                 cart[editingCartItemIndex] = cartItem;
             } else {
                 cart.push(cartItem);
             }
-            
             updateCartSummary();
             renderItems(activeCategory);
             closeCustomizationModal();
@@ -582,13 +609,10 @@
                 cartModalBody.innerHTML = '<p style="padding: 20px; text-align: center;">Your cart is empty.</p>';
                 return;
             }
-
             cart.forEach((item, index) => {
                 let addonsHtml = item.selectedAddons.map(addon => `<li>${addon.name}</li>`).join('');
                 if (addonsHtml) addonsHtml = `<ul class="cart-item-addons">${addonsHtml}</ul>`;
-
                 let instructionsHtml = item.instructions ? `<p class="cart-item-instructions">"${item.instructions}"</p>` : '';
-
                 const cartItemDiv = document.createElement('div');
                 cartItemDiv.className = 'cart-item';
                 cartItemDiv.innerHTML = `
@@ -608,17 +632,14 @@
                 `;
                 cartModalBody.appendChild(cartItemDiv);
             });
-            
-            // Add event listeners for edit/remove buttons
             cartModalBody.querySelectorAll('.cart-edit-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     const cartIndex = parseInt(e.target.dataset.cartIndex);
                     const itemToEdit = cart[cartIndex];
-                    cartModalOverlay.classList.remove('visible'); // Hide cart modal
-                    openCustomizationModal(itemToEdit, cartIndex); // Open customization modal in edit mode
+                    cartModalOverlay.classList.remove('visible');
+                    openCustomizationModal(itemToEdit, cartIndex);
                 });
             });
-
             cartModalBody.querySelectorAll('.cart-remove-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     const cartIndex = parseInt(e.target.dataset.cartIndex);
@@ -635,10 +656,8 @@
                 cartSummaryBar.classList.remove('visible');
                 return;
             }
-            
             const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
             const totalPrice = cart.reduce((sum, item) => sum + item.totalPrice, 0);
-            
             cartItemCountSpan.textContent = `${totalItems} Item${totalItems > 1 ? 's' : ''}`;
             cartTotalPriceSpan.textContent = totalPrice.toFixed(2);
             cartSummaryBar.classList.add('visible');
@@ -649,22 +668,30 @@
                 alert("Your cart is empty!");
                 return null;
             }
-            let message = "Hi, I'd like to place the following order:\n\n";
+            let message = "";
+            if (tableNumber) {
+                message += `*New Order from Table: ${tableNumber}*\n\n`;
+            } else {
+                message += "*New Order Request*\n\n";
+            }
             cart.forEach((item) => {
                 message += `*${item.quantity}x ${item.Name}* - ₹${item.totalPrice.toFixed(2)}\n`;
                 if (item.selectedAddons.length > 0) {
-                    item.selectedAddons.forEach(addon => { message += `  - ${addon.name}\n`; });
+                    item.selectedAddons.forEach(addon => { message += `  - _${addon.name}_\n`; });
                 }
                 if (item.instructions.trim()) {
-                    message += `  > _${item.instructions.trim()}_\n`;
+                    message += `  > _Item Instructions: ${item.instructions.trim()}_\n`;
                 }
             });
+            const generalInstructions = document.getElementById('general-instructions').value.trim();
+            if (generalInstructions) {
+                message += `\n*General Instructions for Order:*\n_${generalInstructions}_\n`;
+            }
             const grandTotal = cart.reduce((sum, item) => sum + item.totalPrice, 0);
             message += `\n*Grand Total: ₹${grandTotal.toFixed(2)}*`;
             return encodeURIComponent(message);
         }
 
-        // --- Event Listeners ---
         custModalOverlay.addEventListener('click', (e) => { if (e.target === custModalOverlay) closeCustomizationModal(); });
         cartModalOverlay.addEventListener('click', (e) => { if (e.target === cartModalOverlay) cartModalOverlay.classList.remove('visible'); });
         closeCartModalBtn.addEventListener('click', () => cartModalOverlay.classList.remove('visible'));
@@ -681,6 +708,7 @@
             }
         });
 
+        getTableNumberFromURL();
         renderCategories();
     });
     </script>
