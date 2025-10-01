@@ -458,8 +458,8 @@
         function getTableNumberFromURL() {
             const params = new URLSearchParams(window.location.search);
             const table = params.get('table');
-            if (table && !isNaN(table)) {
-                tableNumber = table;
+            if (table && table.trim() !== '') {
+                tableNumber = table.trim();
                 document.getElementById('table-number-display').textContent = `- Table ${tableNumber}`;
             }
         }
