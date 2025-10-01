@@ -78,6 +78,7 @@
             overflow-y: auto;
             border-right: 1px solid var(--border-color);
             padding-top: 10px;
+            flex-shrink: 0;
         }
 
         .category-list ul {
@@ -138,34 +139,62 @@
         .attribute-icon {
             width: 12px;
             height: 12px;
-            border-radius: 50%;
-            border: 2px solid;
+            border-radius: 2px;
+            border: 1px solid;
             margin-right: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .attribute-icon::after {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: currentColor;
         }
 
-        .attribute-icon.veg { border-color: var(--veg-color); background-color: var(--veg-color); }
-        .attribute-icon.non-veg { border-color: var(--non-veg-color); background-color: var(--non-veg-color); }
-        .attribute-icon.egg { border-color: var(--egg-color); background-color: var(--egg-color); }
+        .attribute-icon.veg { border-color: var(--veg-color); color: var(--veg-color); }
+        .attribute-icon.non-veg { border-color: var(--non-veg-color); color: var(--non-veg-color); }
+        .attribute-icon.egg { border-color: var(--egg-color); color: var(--egg-color); }
 
         .item-price {
             font-size: 0.9em;
             color: #666;
         }
 
-        .add-button {
+        .item-action-container {
+            width: 100px;
+            text-align: center;
+        }
+
+        .add-button, .item-quantity-control {
             background-color: #fff;
             color: var(--primary-color);
             border: 2px solid var(--primary-color);
-            padding: 8px 20px;
             border-radius: 20px;
-            cursor: pointer;
             font-weight: 700;
+            cursor: pointer;
             transition: all 0.2s ease-in-out;
         }
+        
+        .add-button { padding: 8px 20px; }
+        .add-button:hover { background-color: var(--primary-color); color: #fff; }
 
-        .add-button:hover {
-            background-color: var(--primary-color);
-            color: #fff;
+        .item-quantity-control {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px;
+        }
+        .item-quantity-control button {
+            background: transparent;
+            border: none;
+            color: var(--primary-color);
+            font-size: 1.2em;
+            font-weight: 700;
+            cursor: pointer;
+            width: 30px;
         }
 
         /* --- Cart Summary --- */
@@ -192,7 +221,7 @@
             transform: translateY(0);
         }
 
-        /* --- Modal --- */
+        /* --- Modals --- */
         .modal-overlay {
             position: absolute;
             top: 0;
@@ -200,9 +229,10 @@
             width: 100%;
             height: 100%;
             background: rgba(0, 0, 0, 0.6);
-            display: none; /* Initially hidden */
+            display: none;
             justify-content: center;
             align-items: center;
+            z-index: 100;
         }
 
         .modal-overlay.visible {
@@ -223,194 +253,106 @@
         .modal-header {
             padding: 15px 20px;
             border-bottom: 1px solid var(--border-color);
-        }
-        
-        .modal-item-name {
-            font-size: 1.2em;
-            font-weight: 700;
-        }
-        
-        .modal-item-price {
-            font-size: 1em;
-            color: #555;
-        }
-
-        .modal-body {
-            padding: 20px;
-            overflow-y: auto;
-            flex-grow: 1;
-        }
-
-        .addon-group {
-            margin-bottom: 20px;
-        }
-
-        .addon-group h4 {
-            font-size: 1em;
-            font-weight: 500;
-            margin-bottom: 10px;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 5px;
-        }
-
-        .addon-item {
             display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-        
-        .addon-item input {
-            margin-right: 10px;
-        }
-
-        .addon-item label {
-            flex-grow: 1;
-        }
-        
-        .addon-item .price {
-            font-weight: 500;
-        }
-
-        .instructions {
-            width: 100%;
-            padding: 10px;
-            border-radius: 5px;
-            border: 1px solid var(--border-color);
-            margin-top: 10px;
-            resize: vertical;
-            min-height: 60px;
-        }
-
-        .modal-footer {
-            padding: 15px;
-            border-top: 1px solid var(--border-color);
-            display: flex;
-            align-items: center;
             justify-content: space-between;
-        }
-
-        .quantity-control {
-            display: flex;
             align-items: center;
         }
+        .close-btn { font-size: 1.5rem; cursor: pointer; color: #888;}
+        
+        .modal-item-name { font-size: 1.2em; font-weight: 700; }
+        .modal-item-price { font-size: 1em; color: #555; }
 
-        .quantity-btn {
-            background: var(--secondary-color);
-            border: 1px solid var(--border-color);
-            width: 30px;
-            height: 30px;
-            font-size: 1.2em;
-            cursor: pointer;
-        }
+        .modal-body { padding: 20px; overflow-y: auto; flex-grow: 1; }
+        .addon-group { margin-bottom: 20px; }
+        .addon-group h4 { font-size: 1em; font-weight: 500; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .addon-item { display: flex; align-items: center; margin-bottom: 10px; }
+        .addon-item input { margin-right: 10px; }
+        .addon-item label { flex-grow: 1; }
+        .addon-item .price { font-weight: 500; }
+        .instructions { width: 100%; padding: 10px; border-radius: 5px; border: 1px solid var(--border-color); margin-top: 10px; resize: vertical; min-height: 60px; }
 
-        .quantity-display {
-            padding: 0 15px;
-            font-weight: 700;
-            font-size: 1.1em;
-        }
-
-        .add-to-cart-btn {
-            background: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            font-weight: 700;
-            cursor: pointer;
-        }
+        .modal-footer { padding: 15px; border-top: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; }
+        .quantity-control { display: flex; align-items: center; }
+        .quantity-btn { background: var(--secondary-color); border: 1px solid var(--border-color); width: 30px; height: 30px; font-size: 1.2em; cursor: pointer; }
+        .quantity-display { padding: 0 15px; font-weight: 700; font-size: 1.1em; }
+        .add-to-cart-btn { background: var(--primary-color); color: white; border: none; padding: 10px 20px; border-radius: 5px; font-weight: 700; cursor: pointer; }
+        
+        /* --- Cart Modal Specific Styles --- */
+        #cart-modal-body { padding: 0; }
+        .cart-item { padding: 15px 20px; border-bottom: 1px solid #eee; }
+        .cart-item:last-child { border-bottom: none; }
+        .cart-item-name { font-weight: 700; display: flex; align-items: center; margin-bottom: 5px; }
+        .cart-item-addons { font-size: 0.8em; color: #666; margin-left: 20px; }
+        .cart-item-instructions { font-size: 0.8em; color: #d9534f; margin-left: 20px; font-style: italic; }
+        .cart-item-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+        .cart-item-actions button { font-size: 0.8em; padding: 4px 8px; border: 1px solid; border-radius: 4px; cursor: pointer; background: white; margin-left: 5px; }
+        .cart-edit-btn { color: #5bc0de; border-color: #5bc0de; }
+        .cart-remove-btn { color: #d9534f; border-color: #d9534f; }
+        .cart-item-price { font-weight: 700; }
+        #cart-modal-footer { justify-content: center; }
     </style>
 </head>
 <body>
 
     <div class="phone-wrapper">
         <div class="app-container">
-            <header class="header">
-                <h1>Our Menu</h1>
-            </header>
+            <header class="header"><h1>Our Menu</h1></header>
             <div class="menu-container">
-                <aside class="category-list">
-                    <ul id="category-list-ul"></ul>
-                </aside>
+                <aside class="category-list"><ul id="category-list-ul"></ul></aside>
                 <main class="item-list" id="item-list-main"></main>
             </div>
             <div class="cart-summary" id="cart-summary-bar">
-                <div>
-                    <span id="cart-item-count">0 Items</span> | ₹<span id="cart-total-price">0</span>
-                </div>
-                <button id="send-whatsapp-btn" style="background: #25D366; color: white; border: none; padding: 10px 15px; border-radius: 20px; font-weight: 700; cursor: pointer;">
-                    Send Order
-                </button>
+                <div><span id="cart-item-count">0 Items</span> | ₹<span id="cart-total-price">0</span></div>
+                <button id="view-order-btn" style="background: transparent; border: none; color: white; font-weight: 700;">View Order</button>
             </div>
         </div>
 
         <div class="modal-overlay" id="customization-modal-overlay">
-            <div class="modal" id="customization-modal-content">
+            <div class="modal" id="customization-modal-content"></div>
+        </div>
+        
+        <div class="modal-overlay" id="cart-modal-overlay">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3>Your Order</h3>
+                    <span class="close-btn" id="close-cart-modal">&times;</span>
                 </div>
+                <div class="modal-body" id="cart-modal-body"></div>
+                <div class="modal-footer" id="cart-modal-footer">
+                    <button id="send-whatsapp-btn" style="background: #25D366; color: white; border: none; padding: 12px 25px; border-radius: 25px; font-weight: 700; cursor: pointer; font-size: 1em;">
+                        Send Order on WhatsApp
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
-
 
     <script>
     document.addEventListener('DOMContentLoaded', () => {
 
-        // --- DATA (Converted from CSVs) ---
-        
-        const menuItems = [
-            { "Name": "Aloo Pyaaz Paratha", "Category": "Food Paratha", "Price": 220, "Attributes": "veg", "Addon_Group_Name": "" },
-            { "Name": "Paneer Bhurji Paratha", "Category": "Food Paratha", "Price": 260, "Attributes": "veg", "Addon_Group_Name": "" },
-            { "Name": "Scrambled Eggs", "Category": "Eggs", "Price": 330, "Attributes": "egg", "Addon_Group_Name": "" },
-            { "Name": "Anda Bhurji", "Category": "Eggs", "Price": 300, "Attributes": "egg", "Addon_Group_Name": "" },
-            { "Name": "French Toast- Original With Cinnamon", "Category": "Eggs", "Price": 330, "Attributes": "veg", "Addon_Group_Name": "" },
-            { "Name": "Mushroom on Toast", "Category": "Small Bites", "Price": 380, "Attributes": "veg", "Addon_Group_Name": "" },
-            { "Name": "Avocado on Toast", "Category": "Small Bites", "Price": 420, "Attributes": "veg", "Addon_Group_Name": "" },
-            { "Name": "Classic Pancake", "Category": "Pancakes", "Price": 360, "Attributes": "veg", "Addon_Group_Name": "" },
-            { "Name": "French Fries", "Category": "Small Bites", "Price": 220, "Attributes": "veg", "Addon_Group_Name": "" },
-            { "Name": "Hummus with pita", "Category": "Small Bites", "Price": 330, "Attributes": "veg", "Addon_Group_Name": "" },
-            { "Name": "Aglio E Olio", "Category": "Pasta", "Price": 520, "Attributes": "veg", "Addon_Group_Name": "Add On For Pasta" },
-            { "Name": "Arrabiata Pasta", "Category": "Pasta", "Price": 520, "Attributes": "veg", "Addon_Group_Name": "Add On For Pasta" },
-            { "Name": "Creamy Mushroom", "Category": "Pasta", "Price": 520, "Attributes": "veg", "Addon_Group_Name": "Add On For Pasta" },
-            { "Name": "Alfredo Pasta", "Category": "Pasta", "Price": 520, "Attributes": "veg", "Addon_Group_Name": "Add On For Pasta" },
-            { "Name": "Americano", "Category": "Coffee", "Price": 180, "Attributes": "veg", "Addon_Group_Name": "" },
-            { "Name": "Espresso", "Category": "Coffee", "Price": 160, "Attributes": "veg", "Addon_Group_Name": "" },
-            { "Name": "Cappuccino", "Category": "Coffee", "Price": 200, "Attributes": "veg", "Addon_Group_Name": "Add On Coffee" },
-            { "Name": "Cafe Latte", "Category": "Coffee", "Price": 200, "Attributes": "veg", "Addon_Group_Name": "Add On Coffee" },
-            { "Name": "Flat White", "Category": "Coffee", "Price": 220, "Attributes": "veg", "Addon_Group_Name": "" },
-            { "Name": "Mocha", "Category": "Coffee", "Price": 230, "Attributes": "veg", "Addon_Group_Name": "Add On Coffee" },
-            { "Name": "Cold Coffee", "Category": "Non Coffee Cold", "Price": 230, "Attributes": "veg", "Addon_Group_Name": "Add On Coffee" },
-            { "Name": "Cookie", "Category": "Small Bites", "Price": 30, "Attributes": "veg", "Addon_Group_Name": "" },
-            { "Name": "Shakshuka", "Category": "Eggs", "Price": 380, "Attributes": "egg", "Addon_Group_Name": "" },
-            { "Name": "Peri Peri French Fries", "Category": "Sidekicks", "Price": 240, "Attributes": "veg", "Addon_Group_Name": "" },
-            { "Name": "Stuffed Grilled Chicken", "Category": "Mains", "Price": 620, "Attributes": "non-veg", "Addon_Group_Name": "" },
-        ];
+        const menuItems = [ { "Name": "Aloo Pyaaz Paratha", "Category": "Food Paratha", "Price": 220, "Attributes": "veg", "Addon_Group_Name": "" }, { "Name": "Paneer Bhurji Paratha", "Category": "Food Paratha", "Price": 260, "Attributes": "veg", "Addon_Group_Name": "" }, { "Name": "Scrambled Eggs", "Category": "Eggs", "Price": 330, "Attributes": "egg", "Addon_Group_Name": "" }, { "Name": "Anda Bhurji", "Category": "Eggs", "Price": 300, "Attributes": "egg", "Addon_Group_Name": "" }, { "Name": "French Toast- Original With Cinnamon", "Category": "Eggs", "Price": 330, "Attributes": "veg", "Addon_Group_Name": "" }, { "Name": "Mushroom on Toast", "Category": "Small Bites", "Price": 380, "Attributes": "veg", "Addon_Group_Name": "" }, { "Name": "Avocado on Toast", "Category": "Small Bites", "Price": 420, "Attributes": "veg", "Addon_Group_Name": "" }, { "Name": "Classic Pancake", "Category": "Pancakes", "Price": 360, "Attributes": "veg", "Addon_Group_Name": "" }, { "Name": "French Fries", "Category": "Small Bites", "Price": 220, "Attributes": "veg", "Addon_Group_Name": "" }, { "Name": "Hummus with pita", "Category": "Small Bites", "Price": 330, "Attributes": "veg", "Addon_Group_Name": "" }, { "Name": "Aglio E Olio", "Category": "Pasta", "Price": 520, "Attributes": "veg", "Addon_Group_Name": "Add On For Pasta" }, { "Name": "Arrabiata Pasta", "Category": "Pasta", "Price": 520, "Attributes": "veg", "Addon_Group_Name": "Add On For Pasta" }, { "Name": "Creamy Mushroom", "Category": "Pasta", "Price": 520, "Attributes": "veg", "Addon_Group_Name": "Add On For Pasta" }, { "Name": "Alfredo Pasta", "Category": "Pasta", "Price": 520, "Attributes": "veg", "Addon_Group_Name": "Add On For Pasta" }, { "Name": "Americano", "Category": "Coffee", "Price": 180, "Attributes": "veg", "Addon_Group_Name": "" }, { "Name": "Espresso", "Category": "Coffee", "Price": 160, "Attributes": "veg", "Addon_Group_Name": "" }, { "Name": "Cappuccino", "Category": "Coffee", "Price": 200, "Attributes": "veg", "Addon_Group_Name": "Add On Coffee" }, { "Name": "Cafe Latte", "Category": "Coffee", "Price": 200, "Attributes": "veg", "Addon_Group_Name": "Add On Coffee" }, { "Name": "Flat White", "Category": "Coffee", "Price": 220, "Attributes": "veg", "Addon_Group_Name": "" }, { "Name": "Mocha", "Category": "Coffee", "Price": 230, "Attributes": "veg", "Addon_Group_Name": "Add On Coffee" }, { "Name": "Cold Coffee", "Category": "Non Coffee Cold", "Price": 230, "Attributes": "veg", "Addon_Group_Name": "Add On Coffee" }, { "Name": "Cookie", "Category": "Small Bites", "Price": 30, "Attributes": "veg", "Addon_Group_Name": "" }, { "Name": "Shakshuka", "Category": "Eggs", "Price": 380, "Attributes": "egg", "Addon_Group_Name": "" }, { "Name": "Peri Peri French Fries", "Category": "Sidekicks", "Price": 240, "Attributes": "veg", "Addon_Group_Name": "" }, { "Name": "Stuffed Grilled Chicken", "Category": "Mains", "Price": 620, "Attributes": "non-veg", "Addon_Group_Name": "" } ];
+        const addons = [ { "Addon_Group_Name": "Add On For Pasta", "Addon_Item_Selection": "S", "Addon_Item_Name": "Chicken", "Addon_Item_Price": 70 }, { "Addon_Group_Name": "Add On Coffee", "Addon_Item_Selection": "M", "Addon_Item_Name": "Gingerbread", "Addon_Item_Price": 30 }, { "Addon_Group_Name": "Add On Coffee", "Addon_Item_Selection": "M", "Addon_Item_Name": "Popcorn", "Addon_Item_Price": 30 }, { "Addon_Group_Name": "Add On Coffee", "Addon_Item_Selection": "M", "Addon_Item_Name": "Vanilla", "Addon_Item_Price": 30 }, { "Addon_Group_Name": "Add On Coffee", "Addon_Item_Selection": "M", "Addon_Item_Name": "Toffee", "Addon_Item_Price": 30 }, { "Addon_Group_Name": "Add On Coffee", "Addon_Item_Selection": "M", "Addon_Item_Name": "Caramel", "Addon_Item_Price": 30 }, { "Addon_Group_Name": "Add On Coffee", "Addon_Item_Selection": "M", "Addon_Item_Name": "Chocolate", "Addon_Item_Price": 30 }, { "Addon_Group_Name": "Add On Coffee", "Addon_Item_Selection": "M", "Addon_Item_Name": "Irish", "Addon_Item_Price": 30 }, { "Addon_Group_Name": "Add On Coffee", "Addon_Item_Selection": "M", "Addon_Item_Name": "Hazelnut", "Addon_Item_Price": 30 } ];
 
-        const addons = [
-            { "Addon_Group_Name": "Add On For Pasta", "Addon_Min": 0, "Addon_Max": 1, "Addon_Item_Selection": "S", "Addon_Item_Name": "Chicken", "Addon_Item_Price": 70, "Attribute": "non-veg" },
-            { "Addon_Group_Name": "Add On Coffee", "Addon_Min": 1, "Addon_Max": 6, "Addon_Item_Selection": "M", "Addon_Item_Name": "Gingerbread", "Addon_Item_Price": 30, "Attribute": "veg" },
-            { "Addon_Group_Name": "Add On Coffee", "Addon_Min": 1, "Addon_Max": 6, "Addon_Item_Selection": "M", "Addon_Item_Name": "Popcorn", "Addon_Item_Price": 30, "Attribute": "veg" },
-            { "Addon_Group_Name": "Add On Coffee", "Addon_Min": 1, "Addon_Max": 6, "Addon_Item_Selection": "M", "Addon_Item_Name": "Vanilla", "Addon_Item_Price": 30, "Attribute": "veg" },
-            { "Addon_Group_Name": "Add On Coffee", "Addon_Min": 1, "Addon_Max": 6, "Addon_Item_Selection": "M", "Addon_Item_Name": "Toffee", "Addon_Item_Price": 30, "Attribute": "veg" },
-            { "Addon_Group_Name": "Add On Coffee", "Addon_Min": 1, "Addon_Max": 6, "Addon_Item_Selection": "M", "Addon_Item_Name": "Caramel", "Addon_Item_Price": 30, "Attribute": "veg" },
-            { "Addon_Group_Name": "Add On Coffee", "Addon_Min": 1, "Addon_Max": 6, "Addon_Item_Selection": "M", "Addon_Item_Name": "Chocolate", "Addon_Item_Price": 30, "Attribute": "veg" },
-            { "Addon_Group_Name": "Add On Coffee", "Addon_Min": 1, "Addon_Max": 6, "Addon_Item_Selection": "M", "Addon_Item_Name": "Irish", "Addon_Item_Price": 30, "Attribute": "veg" },
-            { "Addon_Group_Name": "Add On Coffee", "Addon_Min": 1, "Addon_Max": 6, "Addon_Item_Selection": "M", "Addon_Item_Name": "Hazelnut", "Addon_Item_Price": 30, "Attribute": "veg" }
-        ];
-
-        // --- State ---
         let cart = [];
         let currentItemForModal = null;
+        let editingCartItemIndex = null;
+        let activeCategory = null;
         
-        // --- DOM Elements ---
         const categoryListUl = document.getElementById('category-list-ul');
         const itemListMain = document.getElementById('item-list-main');
         const cartSummaryBar = document.getElementById('cart-summary-bar');
         const cartItemCountSpan = document.getElementById('cart-item-count');
         const cartTotalPriceSpan = document.getElementById('cart-total-price');
-        const modalOverlay = document.getElementById('customization-modal-overlay');
-        const modalContent = document.getElementById('customization-modal-content');
-        const sendWhatsappBtn = document.getElementById('send-whatsapp-btn');
-
-        // --- Functions ---
         
+        const custModalOverlay = document.getElementById('customization-modal-overlay');
+        const custModalContent = document.getElementById('customization-modal-content');
+        
+        const cartModalOverlay = document.getElementById('cart-modal-overlay');
+        const cartModalBody = document.getElementById('cart-modal-body');
+        const closeCartModalBtn = document.getElementById('close-cart-modal');
+        const sendWhatsappBtn = document.getElementById('send-whatsapp-btn');
+        const viewOrderBtn = document.getElementById('view-order-btn');
+
         function getAttributeClass(attribute) {
             if (!attribute) return '';
             const attr = attribute.toLowerCase().trim();
@@ -430,11 +372,11 @@
                 li.addEventListener('click', () => {
                     document.querySelector('.category-list li.active')?.classList.remove('active');
                     li.classList.add('active');
+                    activeCategory = category;
                     renderItems(category);
                 });
                 categoryListUl.appendChild(li);
             });
-            // Activate the first category by default
             if (categoryListUl.firstChild) {
                 categoryListUl.firstChild.click();
             }
@@ -443,9 +385,25 @@
         function renderItems(category) {
             itemListMain.innerHTML = '';
             const itemsInCategory = menuItems.filter(item => item.Category === category);
-            itemsInCategory.forEach((item, index) => {
+            
+            itemsInCategory.forEach(item => {
+                const itemInCart = cart.find(cartItem => cartItem.Name === item.Name && !cartItem.selectedAddons.length && !cartItem.instructions);
                 const itemCard = document.createElement('div');
                 itemCard.className = 'item-card';
+
+                let actionHtml;
+                if (itemInCart) {
+                    actionHtml = `
+                        <div class="item-quantity-control">
+                            <button class="decrease-item-qty" data-item-name="${item.Name}">-</button>
+                            <span>${itemInCart.quantity}</span>
+                            <button class="increase-item-qty" data-item-name="${item.Name}">+</button>
+                        </div>
+                    `;
+                } else {
+                    actionHtml = `<button class="add-button" data-item-name="${item.Name}">ADD</button>`;
+                }
+
                 itemCard.innerHTML = `
                     <div class="item-details">
                         <div class="item-name">
@@ -454,24 +412,71 @@
                         </div>
                         <div class="item-price">₹${item.Price}</div>
                     </div>
-                    <button class="add-button" data-item-name="${item.Name}">ADD</button>
+                    <div class="item-action-container" id="action-for-${item.Name.replace(/\s+/g, '-')}">
+                        ${actionHtml}
+                    </div>
                 `;
-                itemCard.querySelector('.add-button').addEventListener('click', () => openCustomizationModal(item));
                 itemListMain.appendChild(itemCard);
+            });
+            
+            // Add event listeners after rendering
+            itemListMain.querySelectorAll('.add-button').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const itemName = e.target.dataset.itemName;
+                    const item = menuItems.find(i => i.Name === itemName);
+                    if (item.Addon_Group_Name) {
+                        openCustomizationModal(item);
+                    } else {
+                        // Directly add to cart if no addons
+                        cart.push({ ...item, quantity: 1, selectedAddons: [], instructions: '', totalPrice: item.Price });
+                        updateCartSummary();
+                        renderItems(activeCategory);
+                    }
+                });
+            });
+
+            itemListMain.querySelectorAll('.decrease-item-qty').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const itemName = e.target.dataset.itemName;
+                    const cartIndex = cart.findIndex(i => i.Name === itemName && !i.selectedAddons.length && !i.instructions);
+                    if (cartIndex > -1) {
+                        if (cart[cartIndex].quantity > 1) {
+                            cart[cartIndex].quantity--;
+                            cart[cartIndex].totalPrice = cart[cartIndex].Price * cart[cartIndex].quantity;
+                        } else {
+                            cart.splice(cartIndex, 1);
+                        }
+                        updateCartSummary();
+                        renderItems(activeCategory);
+                    }
+                });
+            });
+
+            itemListMain.querySelectorAll('.increase-item-qty').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const itemName = e.target.dataset.itemName;
+                    const cartIndex = cart.findIndex(i => i.Name === itemName && !i.selectedAddons.length && !i.instructions);
+                    if (cartIndex > -1) {
+                        cart[cartIndex].quantity++;
+                        cart[cartIndex].totalPrice = cart[cartIndex].Price * cart[cartIndex].quantity;
+                        updateCartSummary();
+                        renderItems(activeCategory);
+                    }
+                });
             });
         }
         
-        function openCustomizationModal(item) {
+        function openCustomizationModal(item, cartIndex = null) {
             currentItemForModal = item;
+            editingCartItemIndex = cartIndex;
+            
+            const existingItem = (cartIndex !== null) ? cart[cartIndex] : null;
+
             const relevantAddons = addons.filter(addon => addon.Addon_Group_Name === item.Addon_Group_Name);
             const addonGroups = {};
             relevantAddons.forEach(addon => {
                 if (!addonGroups[addon.Addon_Group_Name]) {
-                    addonGroups[addon.Addon_Group_Name] = {
-                        items: [],
-                        type: addon.Addon_Item_Selection === 'S' ? 'radio' : 'checkbox',
-                        name: addon.Addon_Group_Name.replace(/\s+/g, '-') // for input name attribute
-                    };
+                    addonGroups[addon.Addon_Group_Name] = { items: [], type: addon.Addon_Item_Selection === 'S' ? 'radio' : 'checkbox', name: addon.Addon_Group_Name.replace(/\s+/g, '-') };
                 }
                 addonGroups[addon.Addon_Group_Name].items.push(addon);
             });
@@ -481,9 +486,10 @@
                 const group = addonGroups[groupName];
                 addonHtml += `<div class="addon-group"><h4>${groupName}</h4>`;
                 group.items.forEach(addon => {
+                    const isChecked = existingItem ? existingItem.selectedAddons.some(sa => sa.name === addon.Addon_Item_Name) : false;
                     addonHtml += `
                         <div class="addon-item">
-                            <input type="${group.type}" name="${group.name}" id="${addon.Addon_Item_Name}" value="${addon.Addon_Item_Price}" data-name="${addon.Addon_Item_Name}">
+                            <input type="${group.type}" name="${group.name}" id="${addon.Addon_Item_Name}" value="${addon.Addon_Item_Price}" data-name="${addon.Addon_Item_Name}" ${isChecked ? 'checked' : ''}>
                             <label for="${addon.Addon_Item_Name}">${addon.Addon_Item_Name}</label>
                             <span class="price">+ ₹${addon.Addon_Item_Price}</span>
                         </div>
@@ -492,44 +498,45 @@
                 addonHtml += `</div>`;
             }
 
-            modalContent.innerHTML = `
+            custModalContent.innerHTML = `
                 <div class="modal-header">
                     <div class="modal-item-name">${item.Name}</div>
-                    <div class="modal-item-price">₹${item.Price}</div>
+                    <span class="close-btn" id="close-cust-modal">&times;</span>
                 </div>
                 <div class="modal-body">
                     ${addonHtml}
-                    <textarea class="instructions" id="special-instructions" placeholder="Special instructions..."></textarea>
+                    <textarea class="instructions" id="special-instructions" placeholder="Special instructions...">${existingItem ? existingItem.instructions : ''}</textarea>
                 </div>
                 <div class="modal-footer">
                     <div class="quantity-control">
                         <button class="quantity-btn" id="decrease-qty">-</button>
-                        <span class="quantity-display" id="quantity-display">1</span>
+                        <span class="quantity-display" id="quantity-display">${existingItem ? existingItem.quantity : 1}</span>
                         <button class="quantity-btn" id="increase-qty">+</button>
                     </div>
-                    <button class="add-to-cart-btn" id="add-to-cart-btn">Add Item - ₹${item.Price}</button>
+                    <button class="add-to-cart-btn" id="add-to-cart-btn">${editingCartItemIndex !== null ? 'Update Item' : 'Add Item'}</button>
                 </div>
             `;
             
-            modalOverlay.classList.add('visible');
+            custModalOverlay.classList.add('visible');
+            updateModalPrice(); // Initial price calculation
             
-            // Add event listeners for modal controls
             document.getElementById('decrease-qty').addEventListener('click', () => updateQuantity(-1));
             document.getElementById('increase-qty').addEventListener('click', () => updateQuantity(1));
-            document.getElementById('add-to-cart-btn').addEventListener('click', addToCart);
-            modalContent.querySelectorAll('input[type="radio"], input[type="checkbox"]').forEach(input => {
+            document.getElementById('add-to-cart-btn').addEventListener('click', saveItemToCart);
+            document.getElementById('close-cust-modal').addEventListener('click', closeCustomizationModal);
+            custModalContent.querySelectorAll('input[type="radio"], input[type="checkbox"]').forEach(input => {
                 input.addEventListener('change', updateModalPrice);
             });
         }
         
         function updateModalPrice() {
             let addonPrice = 0;
-            modalContent.querySelectorAll('input:checked').forEach(input => {
+            custModalContent.querySelectorAll('input:checked').forEach(input => {
                 addonPrice += parseFloat(input.value);
             });
             const quantity = parseInt(document.getElementById('quantity-display').textContent);
             const totalItemPrice = (currentItemForModal.Price + addonPrice) * quantity;
-            document.getElementById('add-to-cart-btn').textContent = `Add Item - ₹${totalItemPrice.toFixed(2)}`;
+            document.getElementById('add-to-cart-btn').textContent = `${editingCartItemIndex !== null ? 'Update' : 'Add'} Item - ₹${totalItemPrice.toFixed(2)}`;
         }
 
         function updateQuantity(change) {
@@ -541,37 +548,86 @@
             updateModalPrice();
         }
 
-        function closeModal() {
-            modalOverlay.classList.remove('visible');
-            modalContent.innerHTML = '';
+        function closeCustomizationModal() {
+            custModalOverlay.classList.remove('visible');
+            custModalContent.innerHTML = '';
             currentItemForModal = null;
+            editingCartItemIndex = null;
         }
         
-        function addToCart() {
-            const selectedAddons = [];
-            modalContent.querySelectorAll('input:checked').forEach(input => {
-                selectedAddons.push({
-                    name: input.dataset.name,
-                    price: parseFloat(input.value)
-                });
-            });
+        function saveItemToCart() {
+            const selectedAddons = Array.from(custModalContent.querySelectorAll('input:checked')).map(input => ({ name: input.dataset.name, price: parseFloat(input.value) }));
             const quantity = parseInt(document.getElementById('quantity-display').textContent);
             const instructions = document.getElementById('special-instructions').value;
-            
             const basePrice = currentItemForModal.Price;
             const addonsTotalPrice = selectedAddons.reduce((sum, addon) => sum + addon.price, 0);
             const itemTotalPrice = (basePrice + addonsTotalPrice) * quantity;
 
-            cart.push({
-                ...currentItemForModal,
-                selectedAddons: selectedAddons,
-                quantity: quantity,
-                instructions: instructions,
-                totalPrice: itemTotalPrice
-            });
+            const cartItem = { ...currentItemForModal, selectedAddons, quantity, instructions, totalPrice: itemTotalPrice };
+
+            if (editingCartItemIndex !== null) {
+                cart[editingCartItemIndex] = cartItem;
+            } else {
+                cart.push(cartItem);
+            }
             
             updateCartSummary();
-            closeModal();
+            renderItems(activeCategory);
+            closeCustomizationModal();
+        }
+
+        function renderCartModal() {
+            cartModalBody.innerHTML = '';
+            if (cart.length === 0) {
+                cartModalBody.innerHTML = '<p style="padding: 20px; text-align: center;">Your cart is empty.</p>';
+                return;
+            }
+
+            cart.forEach((item, index) => {
+                let addonsHtml = item.selectedAddons.map(addon => `<li>${addon.name}</li>`).join('');
+                if (addonsHtml) addonsHtml = `<ul class="cart-item-addons">${addonsHtml}</ul>`;
+
+                let instructionsHtml = item.instructions ? `<p class="cart-item-instructions">"${item.instructions}"</p>` : '';
+
+                const cartItemDiv = document.createElement('div');
+                cartItemDiv.className = 'cart-item';
+                cartItemDiv.innerHTML = `
+                    <div class="cart-item-name">
+                        <div class="attribute-icon ${getAttributeClass(item.Attributes)}"></div>
+                        ${item.quantity} x ${item.Name}
+                    </div>
+                    ${addonsHtml}
+                    ${instructionsHtml}
+                    <div class="cart-item-footer">
+                        <div class="cart-item-actions">
+                            <button class="cart-edit-btn" data-cart-index="${index}">Edit</button>
+                            <button class="cart-remove-btn" data-cart-index="${index}">Remove</button>
+                        </div>
+                        <div class="cart-item-price">₹${item.totalPrice.toFixed(2)}</div>
+                    </div>
+                `;
+                cartModalBody.appendChild(cartItemDiv);
+            });
+            
+            // Add event listeners for edit/remove buttons
+            cartModalBody.querySelectorAll('.cart-edit-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const cartIndex = parseInt(e.target.dataset.cartIndex);
+                    const itemToEdit = cart[cartIndex];
+                    cartModalOverlay.classList.remove('visible'); // Hide cart modal
+                    openCustomizationModal(itemToEdit, cartIndex); // Open customization modal in edit mode
+                });
+            });
+
+            cartModalBody.querySelectorAll('.cart-remove-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const cartIndex = parseInt(e.target.dataset.cartIndex);
+                    cart.splice(cartIndex, 1);
+                    updateCartSummary();
+                    renderCartModal();
+                    renderItems(activeCategory);
+                });
+            });
         }
         
         function updateCartSummary() {
@@ -593,42 +649,38 @@
                 alert("Your cart is empty!");
                 return null;
             }
-            let message = "*New Order*\n\n";
-            cart.forEach((item, index) => {
-                message += `*${index + 1}. ${item.Name} x ${item.quantity}* - ₹${item.totalPrice.toFixed(2)}\n`;
+            let message = "Hi, I'd like to place the following order:\n\n";
+            cart.forEach((item) => {
+                message += `*${item.quantity}x ${item.Name}* - ₹${item.totalPrice.toFixed(2)}\n`;
                 if (item.selectedAddons.length > 0) {
-                    item.selectedAddons.forEach(addon => {
-                        message += `  - _${addon.name} (+₹${addon.price})_\n`;
-                    });
+                    item.selectedAddons.forEach(addon => { message += `  - ${addon.name}\n`; });
                 }
                 if (item.instructions.trim()) {
-                    message += `  - _Instructions: ${item.instructions.trim()}_\n`;
+                    message += `  > _${item.instructions.trim()}_\n`;
                 }
-                message += "\n";
             });
-            
             const grandTotal = cart.reduce((sum, item) => sum + item.totalPrice, 0);
-            message += `*Total: ₹${grandTotal.toFixed(2)}*`;
-            
+            message += `\n*Grand Total: ₹${grandTotal.toFixed(2)}*`;
             return encodeURIComponent(message);
         }
 
         // --- Event Listeners ---
-        modalOverlay.addEventListener('click', (e) => {
-            if (e.target === modalOverlay) {
-                closeModal();
-            }
+        custModalOverlay.addEventListener('click', (e) => { if (e.target === custModalOverlay) closeCustomizationModal(); });
+        cartModalOverlay.addEventListener('click', (e) => { if (e.target === cartModalOverlay) cartModalOverlay.classList.remove('visible'); });
+        closeCartModalBtn.addEventListener('click', () => cartModalOverlay.classList.remove('visible'));
+        
+        viewOrderBtn.addEventListener('click', () => {
+            renderCartModal();
+            cartModalOverlay.classList.add('visible');
         });
 
         sendWhatsappBtn.addEventListener('click', () => {
             const message = generateWhatsAppMessage();
             if (message) {
-                const whatsappURL = `https://api.whatsapp.com/send?phone=7011847629&text=${message}`;
-                window.open(whatsappURL, '_blank');
+                window.open(`https://api.whatsapp.com/send?phone=7011847629&text=${message}`, '_blank');
             }
         });
 
-        // --- Initial Load ---
         renderCategories();
     });
     </script>
