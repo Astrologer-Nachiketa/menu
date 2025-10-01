@@ -71,6 +71,13 @@
             font-weight: 500;
         }
 
+        .loading-message {
+            padding: 20px;
+            text-align: center;
+            color: #666;
+            font-size: 1em;
+        }
+
         .menu-container {
             display: flex;
             flex-grow: 1;
@@ -243,7 +250,6 @@
             100% { transform: scale(1); }
         }
 
-
         /* --- Modals --- */
         .modal-overlay {
             position: absolute;
@@ -327,7 +333,9 @@
             </header>
             <div class="menu-container">
                 <aside class="category-list"><ul id="category-list-ul"></ul></aside>
-                <main class="item-list" id="item-list-main"></main>
+                <main class="item-list" id="item-list-main">
+                    <div class="loading-message">Loading menu...</div>
+                </main>
             </div>
             <div class="cart-summary" id="cart-summary-bar">
                 <div><span id="cart-item-count">0 Items</span> | ₹<span id="cart-total-price">0</span></div>
@@ -365,73 +373,11 @@
         const GST_RATE = 0.05; // 5% GST
 
         // URLs for your menu data and add-ons data
-const MENU_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTlM6BGIWdct_szKaONKItArAjOzdEgw-780Qha42rhQNY4_xZ15x8VxzRzzEhlUz8CDGsSY4wbjrip/pub?gid=0&single=true&output=csv';
-const ADDONS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTlM6BGIWdct_szKaONKItArAjOzdEgw-780Qha42rhQNY4_xZ15x8VxzRzzEhlUz8CDGsSY4wbjrip/pub?gid=68309898&single=true&output=csv';
+        const MENU_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTlM6BGIWdct_szKaONKItArAjOzdEgw-780Qha42rhQNY4_xZ15x8VxzRzzEhlUz8CDGsSY4wbjrip/pub?gid=0&single=true&output=csv';
+        const ADDONS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTlM6BGIWdct_szKaONKItArAjOzdEgw-780Qha42rhQNY4_xZ15x8VxzRzzEhlUz8CDGsSY4wbjrip/pub?gid=68309898&single=true&output=csv';
 
-let menuItems = [];
-let addons = [];
-
-/**
- * Fetches and parses CSV data from a URL into an array of JavaScript objects.
- * @param {string} url - The URL of the CSV file.
- * @returns {Array<Object>} The parsed array of objects.
- */
-async function fetchAndParseCSV(url) {
-    try {
-        const response = await fetch(url);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const csvText = await response.text();
-        
-        // Split text into lines, then skip the header row (shift())
-        const lines = csvText.trim().split('\n');
-        const headers = lines.shift().split(',').map(h => h.trim());
-        
-        return lines.map(line => {
-            const values = line.split(',');
-            const item = {};
-            
-            headers.forEach((header, i) => {
-                let value = values[i].trim();
-                
-                // Convert known numerical fields (Price, Addon_Item_Price) to numbers
-                if (header === 'Price' || header === 'Addon_Item_Price') {
-                    item[header] = parseInt(value, 10) || 0; 
-                } else {
-                    item[header] = value;
-                }
-            });
-            return item;
-        });
-
-    } catch (error) {
-        console.error("Error fetching or parsing CSV:", error);
-        return []; // Return an empty array on error
-    }
-}
-
-/**
- * Main function to load all data.
- */
-async function loadMenuData() {
-    console.log("Loading menu items...");
-    menuItems = await fetchAndParseCSV(MENU_CSV_URL);
-    
-    console.log("Loading add-ons...");
-    addons = await fetchAndParseCSV(ADDONS_CSV_URL);
-
-    // Now, 'menuItems' and 'addons' variables are populated
-    console.log("Data loaded successfully!");
-    console.log("Menu Items:", menuItems);
-    console.log("Addons:", addons);
-
-    // You can call your main rendering function here, e.g.,
-    // renderMenu(menuItems); 
-}
-
-// Start the data loading process
-loadMenuData();
+        let menuItems = [];
+        let addons = [];
         let cart = [];
         let currentItemForModal = null;
         let editingCartItemIndex = null;
@@ -453,6 +399,61 @@ loadMenuData();
         const closeCartModalBtn = document.getElementById('close-cart-modal');
         const sendWhatsappBtn = document.getElementById('send-whatsapp-btn');
         const viewOrderBtn = document.getElementById('view-order-btn');
+
+        /**
+         * Fetches and parses CSV data from a URL into an array of JavaScript objects.
+         * @param {string} url - The URL of the CSV file.
+         * @returns {Array<Object>} The parsed array of objects.
+         */
+        async function fetchAndParseCSV(url) {
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const csvText = await response.text();
+                
+                // Split text into lines, then skip the header row (shift())
+                const lines = csvText.trim().split('\n');
+                const headers = lines.shift().split(',').map(h => h.trim());
+                
+                return lines.map(line => {
+                    const values = line.split(',');
+                    const item = {};
+                    
+                    headers.forEach((header, i) => {
+                        let value = values[i] ? values[i].trim() : '';
+                        
+                        // Convert known numerical fields (Price, Addon_Item_Price) to numbers
+                        if (header === 'Price' || header === 'Addon_Item_Price') {
+                            item[header] = parseInt(value, 10) || 0; 
+                        } else {
+                            item[header] = value;
+                        }
+                    });
+                    return item;
+                });
+
+            } catch (error) {
+                console.error("Error fetching or parsing CSV:", error);
+                return []; // Return an empty array on error
+            }
+        }
+
+        /**
+         * Main function to load all data.
+         */
+        async function loadMenuData() {
+            console.log("Loading menu items...");
+            menuItems = await fetchAndParseCSV(MENU_CSV_URL);
+            
+            console.log("Loading add-ons...");
+            addons = await fetchAndParseCSV(ADDONS_CSV_URL);
+
+            console.log("Data loaded successfully!");
+            console.log("Menu Items:", menuItems);
+            console.log("Addons:", addons);
+        }
 
         function getTableNumberFromURL() {
             const params = new URLSearchParams(window.location.search);
@@ -737,8 +738,17 @@ loadMenuData();
             }
         });
 
+        // Initialize the app
         getTableNumberFromURL();
-        renderCategories();
+        
+        // Load data and then render the menu
+        loadMenuData().then(() => {
+            if (menuItems.length === 0) {
+                itemListMain.innerHTML = '<p style="padding: 20px; text-align: center; color: #d9534f;">Error loading menu data. Please refresh the page.</p>';
+                return;
+            }
+            renderCategories();
+        });
     });
     </script>
 </body>
