@@ -225,7 +225,7 @@
         .cart-summary.visible {
             transform: translateY(0);
         }
-
+        
         #view-order-btn {
             background: #fff;
             color: var(--primary-color);
@@ -313,6 +313,9 @@
         .cart-remove-btn { color: #d9534f; border-color: #d9534f; }
         .cart-item-price { font-weight: 700; }
         #cart-modal-footer { justify-content: center; }
+        .totals-summary { padding: 15px 20px; border-top: 1px solid #eee; }
+        .totals-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.9em; }
+        .totals-row.grand-total { font-weight: 700; font-size: 1.1em; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -343,8 +346,9 @@
                     <span class="close-btn" id="close-cart-modal">&times;</span>
                 </div>
                 <div class="modal-body" id="cart-modal-body"></div>
+                <div class="totals-summary" id="cart-totals-summary"></div>
                 <div style="padding: 0 20px 15px 20px;">
-                    <textarea id="general-instructions" class="instructions" placeholder="Any general instructions for the whole order? (e.g., less spicy)"></textarea>
+                    <textarea id="general-instructions" class="instructions" placeholder="Any general instructions? (e.g., less spicy)"></textarea>
                 </div>
                 <div class="modal-footer" id="cart-modal-footer">
                     <button id="send-whatsapp-btn" style="background: #25D366; color: white; border: none; padding: 12px 25px; border-radius: 25px; font-weight: 700; cursor: pointer; font-size: 1em;">
@@ -357,6 +361,8 @@
 
     <script>
     document.addEventListener('DOMContentLoaded', () => {
+
+        const GST_RATE = 0.05; // 5% GST
 
         const menuItems = [ { "Name": "Aloo Pyaaz Paratha", "Category": "Food Paratha", "Price": 220, "Attributes": "veg", "Addon_Group_Name": "" }, { "Name": "Paneer Bhurji Paratha", "Category": "Food Paratha", "Price": 260, "Attributes": "veg", "Addon_Group_Name": "" }, { "Name": "Scrambled Eggs", "Category": "Eggs", "Price": 330, "Attributes": "egg", "Addon_Group_Name": "" }, { "Name": "Anda Bhurji", "Category": "Eggs", "Price": 300, "Attributes": "egg", "Addon_Group_Name": "" }, { "Name": "French Toast- Original With Cinnamon", "Category": "Eggs", "Price": 330, "Attributes": "veg", "Addon_Group_Name": "" }, { "Name": "Mushroom on Toast", "Category": "Small Bites", "Price": 380, "Attributes": "veg", "Addon_Group_Name": "" }, { "Name": "Avocado on Toast", "Category": "Small Bites", "Price": 420, "Attributes": "veg", "Addon_Group_Name": "" }, { "Name": "Classic Pancake", "Category": "Pancakes", "Price": 360, "Attributes": "veg", "Addon_Group_Name": "" }, { "Name": "French Fries", "Category": "Small Bites", "Price": 220, "Attributes": "veg", "Addon_Group_Name": "" }, { "Name": "Hummus with pita", "Category": "Small Bites", "Price": 330, "Attributes": "veg", "Addon_Group_Name": "" }, { "Name": "Aglio E Olio", "Category": "Pasta", "Price": 520, "Attributes": "veg", "Addon_Group_Name": "Add On For Pasta" }, { "Name": "Arrabiata Pasta", "Category": "Pasta", "Price": 520, "Attributes": "veg", "Addon_Group_Name": "Add On For Pasta" }, { "Name": "Creamy Mushroom", "Category": "Pasta", "Price": 520, "Attributes": "veg", "Addon_Group_Name": "Add On For Pasta" }, { "Name": "Alfredo Pasta", "Category": "Pasta", "Price": 520, "Attributes": "veg", "Addon_Group_Name": "Add On For Pasta" }, { "Name": "Americano", "Category": "Coffee", "Price": 180, "Attributes": "veg", "Addon_Group_Name": "" }, { "Name": "Espresso", "Category": "Coffee", "Price": 160, "Attributes": "veg", "Addon_Group_Name": "" }, { "Name": "Cappuccino", "Category": "Coffee", "Price": 200, "Attributes": "veg", "Addon_Group_Name": "Add On Coffee" }, { "Name": "Cafe Latte", "Category": "Coffee", "Price": 200, "Attributes": "veg", "Addon_Group_Name": "Add On Coffee" }, { "Name": "Flat White", "Category": "Coffee", "Price": 220, "Attributes": "veg", "Addon_Group_Name": "" }, { "Name": "Mocha", "Category": "Coffee", "Price": 230, "Attributes": "veg", "Addon_Group_Name": "Add On Coffee" }, { "Name": "Cold Coffee", "Category": "Non Coffee Cold", "Price": 230, "Attributes": "veg", "Addon_Group_Name": "Add On Coffee" }, { "Name": "Cookie", "Category": "Small Bites", "Price": 30, "Attributes": "veg", "Addon_Group_Name": "" }, { "Name": "Shakshuka", "Category": "Eggs", "Price": 380, "Attributes": "egg", "Addon_Group_Name": "" }, { "Name": "Peri Peri French Fries", "Category": "Sidekicks", "Price": 240, "Attributes": "veg", "Addon_Group_Name": "" }, { "Name": "Stuffed Grilled Chicken", "Category": "Mains", "Price": 620, "Attributes": "non-veg", "Addon_Group_Name": "" } ];
         const addons = [ { "Addon_Group_Name": "Add On For Pasta", "Addon_Item_Selection": "S", "Addon_Item_Name": "Chicken", "Addon_Item_Price": 70 }, { "Addon_Group_Name": "Add On Coffee", "Addon_Item_Selection": "M", "Addon_Item_Name": "Gingerbread", "Addon_Item_Price": 30 }, { "Addon_Group_Name": "Add On Coffee", "Addon_Item_Selection": "M", "Addon_Item_Name": "Popcorn", "Addon_Item_Price": 30 }, { "Addon_Group_Name": "Add On Coffee", "Addon_Item_Selection": "M", "Addon_Item_Name": "Vanilla", "Addon_Item_Price": 30 }, { "Addon_Group_Name": "Add On Coffee", "Addon_Item_Selection": "M", "Addon_Item_Name": "Toffee", "Addon_Item_Price": 30 }, { "Addon_Group_Name": "Add On Coffee", "Addon_Item_Selection": "M", "Addon_Item_Name": "Caramel", "Addon_Item_Price": 30 }, { "Addon_Group_Name": "Add On Coffee", "Addon_Item_Selection": "M", "Addon_Item_Name": "Chocolate", "Addon_Item_Price": 30 }, { "Addon_Group_Name": "Add On Coffee", "Addon_Item_Selection": "M", "Addon_Item_Name": "Irish", "Addon_Item_Price": 30 }, { "Addon_Group_Name": "Add On Coffee", "Addon_Item_Selection": "M", "Addon_Item_Name": "Hazelnut", "Addon_Item_Price": 30 } ];
@@ -378,6 +384,7 @@
         
         const cartModalOverlay = document.getElementById('cart-modal-overlay');
         const cartModalBody = document.getElementById('cart-modal-body');
+        const cartTotalsSummary = document.getElementById('cart-totals-summary');
         const closeCartModalBtn = document.getElementById('close-cart-modal');
         const sendWhatsappBtn = document.getElementById('send-whatsapp-btn');
         const viewOrderBtn = document.getElementById('view-order-btn');
@@ -431,29 +438,12 @@
 
                 let actionHtml;
                 if (itemInCart) {
-                    actionHtml = `
-                        <div class="item-quantity-control">
-                            <button class="decrease-item-qty" data-item-name="${item.Name}">-</button>
-                            <span>${itemInCart.quantity}</span>
-                            <button class="increase-item-qty" data-item-name="${item.Name}">+</button>
-                        </div>
-                    `;
+                    actionHtml = `<div class="item-quantity-control"><button class="decrease-item-qty" data-item-name="${item.Name}">-</button><span>${itemInCart.quantity}</span><button class="increase-item-qty" data-item-name="${item.Name}">+</button></div>`;
                 } else {
                     actionHtml = `<button class="add-button" data-item-name="${item.Name}">ADD</button>`;
                 }
 
-                itemCard.innerHTML = `
-                    <div class="item-details">
-                        <div class="item-name">
-                             <div class="attribute-icon ${getAttributeClass(item.Attributes)}"></div>
-                            ${item.Name}
-                        </div>
-                        <div class="item-price">₹${item.Price}</div>
-                    </div>
-                    <div class="item-action-container" id="action-for-${item.Name.replace(/\s+/g, '-')}">
-                        ${actionHtml}
-                    </div>
-                `;
+                itemCard.innerHTML = `<div class="item-details"><div class="item-name"><div class="attribute-icon ${getAttributeClass(item.Attributes)}"></div>${item.Name}</div><div class="item-price">₹${item.Price}</div></div><div class="item-action-container">${actionHtml}</div>`;
                 itemListMain.appendChild(itemCard);
             });
             
@@ -464,37 +454,30 @@
                     if (item.Addon_Group_Name) {
                         openCustomizationModal(item);
                     } else {
-                        cart.push({ ...item, quantity: 1, selectedAddons: [], instructions: '', totalPrice: item.Price });
+                        cart.push({ ...item, quantity: 1, selectedAddons: [], instructions: '', subtotal: item.Price });
                         updateCartSummary();
                         renderItems(activeCategory);
                     }
                 });
             });
 
-            itemListMain.querySelectorAll('.decrease-item-qty').forEach(btn => {
+            itemListMain.querySelectorAll('.decrease-item-qty, .increase-item-qty').forEach(btn => {
                 btn.addEventListener('click', (e) => {
+                    const isIncrease = e.target.classList.contains('increase-item-qty');
                     const itemName = e.target.dataset.itemName;
                     const cartIndex = cart.findIndex(i => i.Name === itemName && !i.selectedAddons.length && !i.instructions);
                     if (cartIndex > -1) {
-                        if (cart[cartIndex].quantity > 1) {
-                            cart[cartIndex].quantity--;
-                            cart[cartIndex].totalPrice = cart[cartIndex].Price * cart[cartIndex].quantity;
+                        if (isIncrease) {
+                            cart[cartIndex].quantity++;
                         } else {
-                            cart.splice(cartIndex, 1);
+                            cart[cartIndex].quantity--;
                         }
-                        updateCartSummary();
-                        renderItems(activeCategory);
-                    }
-                });
-            });
 
-            itemListMain.querySelectorAll('.increase-item-qty').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const itemName = e.target.dataset.itemName;
-                    const cartIndex = cart.findIndex(i => i.Name === itemName && !i.selectedAddons.length && !i.instructions);
-                    if (cartIndex > -1) {
-                        cart[cartIndex].quantity++;
-                        cart[cartIndex].totalPrice = cart[cartIndex].Price * cart[cartIndex].quantity;
+                        if (cart[cartIndex].quantity <= 0) {
+                             cart.splice(cartIndex, 1);
+                        } else {
+                            cart[cartIndex].subtotal = cart[cartIndex].Price * cart[cartIndex].quantity;
+                        }
                         updateCartSummary();
                         renderItems(activeCategory);
                     }
@@ -520,34 +503,11 @@
                 addonHtml += `<div class="addon-group"><h4>${groupName}</h4>`;
                 group.items.forEach(addon => {
                     const isChecked = existingItem ? existingItem.selectedAddons.some(sa => sa.name === addon.Addon_Item_Name) : false;
-                    addonHtml += `
-                        <div class="addon-item">
-                            <input type="${group.type}" name="${group.name}" id="${addon.Addon_Item_Name}" value="${addon.Addon_Item_Price}" data-name="${addon.Addon_Item_Name}" ${isChecked ? 'checked' : ''}>
-                            <label for="${addon.Addon_Item_Name}">${addon.Addon_Item_Name}</label>
-                            <span class="price">+ ₹${addon.Addon_Item_Price}</span>
-                        </div>
-                    `;
+                    addonHtml += `<div class="addon-item"><input type="${group.type}" name="${group.name}" id="${addon.Addon_Item_Name}" value="${addon.Addon_Item_Price}" data-name="${addon.Addon_Item_Name}" ${isChecked ? 'checked' : ''}><label for="${addon.Addon_Item_Name}">${addon.Addon_Item_Name}</label><span class="price">+ ₹${addon.Addon_Item_Price}</span></div>`;
                 });
                 addonHtml += `</div>`;
             }
-            custModalContent.innerHTML = `
-                <div class="modal-header">
-                    <div class="modal-item-name">${item.Name}</div>
-                    <span class="close-btn" id="close-cust-modal">&times;</span>
-                </div>
-                <div class="modal-body">
-                    ${addonHtml}
-                    <textarea class="instructions" id="special-instructions" placeholder="Special instructions...">${existingItem ? existingItem.instructions : ''}</textarea>
-                </div>
-                <div class="modal-footer">
-                    <div class="quantity-control">
-                        <button class="quantity-btn" id="decrease-qty">-</button>
-                        <span class="quantity-display" id="quantity-display">${existingItem ? existingItem.quantity : 1}</span>
-                        <button class="quantity-btn" id="increase-qty">+</button>
-                    </div>
-                    <button class="add-to-cart-btn" id="add-to-cart-btn">${editingCartItemIndex !== null ? 'Update Item' : 'Add Item'}</button>
-                </div>
-            `;
+            custModalContent.innerHTML = `<div class="modal-header"><div class="modal-item-name">${item.Name}</div><span class="close-btn" id="close-cust-modal">&times;</span></div><div class="modal-body">${addonHtml}<textarea class="instructions" id="special-instructions" placeholder="Special instructions...">${existingItem ? existingItem.instructions : ''}</textarea></div><div class="modal-footer"><div class="quantity-control"><button class="quantity-btn" id="decrease-qty">-</button><span class="quantity-display" id="quantity-display">${existingItem ? existingItem.quantity : 1}</span><button class="quantity-btn" id="increase-qty">+</button></div><button class="add-to-cart-btn" id="add-to-cart-btn">${editingCartItemIndex !== null ? 'Update Item' : 'Add Item'}</button></div>`;
             custModalOverlay.classList.add('visible');
             updateModalPrice();
             document.getElementById('decrease-qty').addEventListener('click', () => updateQuantity(-1));
@@ -560,10 +520,7 @@
         }
         
         function updateModalPrice() {
-            let addonPrice = 0;
-            custModalContent.querySelectorAll('input:checked').forEach(input => {
-                addonPrice += parseFloat(input.value);
-            });
+            let addonPrice = Array.from(custModalContent.querySelectorAll('input:checked')).reduce((sum, input) => sum + parseFloat(input.value), 0);
             const quantity = parseInt(document.getElementById('quantity-display').textContent);
             const totalItemPrice = (currentItemForModal.Price + addonPrice) * quantity;
             document.getElementById('add-to-cart-btn').textContent = `${editingCartItemIndex !== null ? 'Update' : 'Add'} Item - ₹${totalItemPrice.toFixed(2)}`;
@@ -571,8 +528,7 @@
 
         function updateQuantity(change) {
             const qtyDisplay = document.getElementById('quantity-display');
-            let currentQty = parseInt(qtyDisplay.textContent);
-            currentQty += change;
+            let currentQty = parseInt(qtyDisplay.textContent) + change;
             if (currentQty < 1) currentQty = 1;
             qtyDisplay.textContent = currentQty;
             updateModalPrice();
@@ -591,8 +547,8 @@
             const instructions = document.getElementById('special-instructions').value;
             const basePrice = currentItemForModal.Price;
             const addonsTotalPrice = selectedAddons.reduce((sum, addon) => sum + addon.price, 0);
-            const itemTotalPrice = (basePrice + addonsTotalPrice) * quantity;
-            const cartItem = { ...currentItemForModal, selectedAddons, quantity, instructions, totalPrice: itemTotalPrice };
+            const itemSubtotal = (basePrice + addonsTotalPrice) * quantity;
+            const cartItem = { ...currentItemForModal, selectedAddons, quantity, instructions, subtotal: itemSubtotal };
             if (editingCartItemIndex !== null) {
                 cart[editingCartItemIndex] = cartItem;
             } else {
@@ -607,6 +563,7 @@
             cartModalBody.innerHTML = '';
             if (cart.length === 0) {
                 cartModalBody.innerHTML = '<p style="padding: 20px; text-align: center;">Your cart is empty.</p>';
+                cartTotalsSummary.innerHTML = '';
                 return;
             }
             cart.forEach((item, index) => {
@@ -615,35 +572,28 @@
                 let instructionsHtml = item.instructions ? `<p class="cart-item-instructions">"${item.instructions}"</p>` : '';
                 const cartItemDiv = document.createElement('div');
                 cartItemDiv.className = 'cart-item';
-                cartItemDiv.innerHTML = `
-                    <div class="cart-item-name">
-                        <div class="attribute-icon ${getAttributeClass(item.Attributes)}"></div>
-                        ${item.quantity} x ${item.Name}
-                    </div>
-                    ${addonsHtml}
-                    ${instructionsHtml}
-                    <div class="cart-item-footer">
-                        <div class="cart-item-actions">
-                            <button class="cart-edit-btn" data-cart-index="${index}">Edit</button>
-                            <button class="cart-remove-btn" data-cart-index="${index}">Remove</button>
-                        </div>
-                        <div class="cart-item-price">₹${item.totalPrice.toFixed(2)}</div>
-                    </div>
-                `;
+                cartItemDiv.innerHTML = `<div class="cart-item-name"><div class="attribute-icon ${getAttributeClass(item.Attributes)}"></div>${item.quantity} x ${item.Name}</div>${addonsHtml}${instructionsHtml}<div class="cart-item-footer"><div class="cart-item-actions"><button class="cart-edit-btn" data-cart-index="${index}">Edit</button><button class="cart-remove-btn" data-cart-index="${index}">Remove</button></div><div class="cart-item-price">₹${item.subtotal.toFixed(2)}</div></div>`;
                 cartModalBody.appendChild(cartItemDiv);
             });
+
+            // Calculate and render totals
+            const { subtotal, gst, grandTotal } = calculateTotals();
+            cartTotalsSummary.innerHTML = `
+                <div class="totals-row"><span>Subtotal</span><span>₹${subtotal.toFixed(2)}</span></div>
+                <div class="totals-row"><span>GST (5%)</span><span>₹${gst.toFixed(2)}</span></div>
+                <div class="totals-row grand-total"><span>Grand Total</span><span>₹${grandTotal.toFixed(2)}</span></div>
+            `;
+            
             cartModalBody.querySelectorAll('.cart-edit-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     const cartIndex = parseInt(e.target.dataset.cartIndex);
-                    const itemToEdit = cart[cartIndex];
                     cartModalOverlay.classList.remove('visible');
-                    openCustomizationModal(itemToEdit, cartIndex);
+                    openCustomizationModal(cart[cartIndex], cartIndex);
                 });
             });
             cartModalBody.querySelectorAll('.cart-remove-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
-                    const cartIndex = parseInt(e.target.dataset.cartIndex);
-                    cart.splice(cartIndex, 1);
+                    cart.splice(parseInt(e.target.dataset.cartIndex), 1);
                     updateCartSummary();
                     renderCartModal();
                     renderItems(activeCategory);
@@ -651,15 +601,23 @@
             });
         }
         
+        function calculateTotals() {
+            const subtotal = cart.reduce((sum, item) => sum + item.subtotal, 0);
+            const gst = subtotal * GST_RATE;
+            const grandTotal = subtotal + gst;
+            return { subtotal, gst, grandTotal };
+        }
+
         function updateCartSummary() {
             if (cart.length === 0) {
                 cartSummaryBar.classList.remove('visible');
                 return;
             }
             const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-            const totalPrice = cart.reduce((sum, item) => sum + item.totalPrice, 0);
+            const { grandTotal } = calculateTotals();
+            
             cartItemCountSpan.textContent = `${totalItems} Item${totalItems > 1 ? 's' : ''}`;
-            cartTotalPriceSpan.textContent = totalPrice.toFixed(2);
+            cartTotalPriceSpan.textContent = grandTotal.toFixed(2);
             cartSummaryBar.classList.add('visible');
         }
 
@@ -675,7 +633,7 @@
                 message += "*New Order Request*\n\n";
             }
             cart.forEach((item) => {
-                message += `*${item.quantity}x ${item.Name}* - ₹${item.totalPrice.toFixed(2)}\n`;
+                message += `*${item.quantity}x ${item.Name}* - ₹${item.subtotal.toFixed(2)}\n`;
                 if (item.selectedAddons.length > 0) {
                     item.selectedAddons.forEach(addon => { message += `  - _${addon.name}_\n`; });
                 }
@@ -683,12 +641,18 @@
                     message += `  > _Item Instructions: ${item.instructions.trim()}_\n`;
                 }
             });
+
+            const { subtotal, gst, grandTotal } = calculateTotals();
+            message += `\n-----------------------------------\n`;
+            message += `*Subtotal:* ₹${subtotal.toFixed(2)}\n`;
+            message += `*GST (5%):* ₹${gst.toFixed(2)}\n`;
+            message += `*Grand Total: ₹${grandTotal.toFixed(2)}*\n`;
+            message += `-----------------------------------\n`;
+
             const generalInstructions = document.getElementById('general-instructions').value.trim();
             if (generalInstructions) {
-                message += `\n*General Instructions for Order:*\n_${generalInstructions}_\n`;
+                message += `\n*General Instructions:*\n_${generalInstructions}_`;
             }
-            const grandTotal = cart.reduce((sum, item) => sum + item.totalPrice, 0);
-            message += `\n*Grand Total: ₹${grandTotal.toFixed(2)}*`;
             return encodeURIComponent(message);
         }
 
