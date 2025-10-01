@@ -364,9 +364,74 @@
 
         const GST_RATE = 0.05; // 5% GST
 
-        const menuItems = [ { "Name": "Aloo Pyaaz Paratha", "Category": "Food Paratha", "Price": 220, "Attributes": "veg", "Addon_Group_Name": "" }, { "Name": "Paneer Bhurji Paratha", "Category": "Food Paratha", "Price": 260, "Attributes": "veg", "Addon_Group_Name": "" }, { "Name": "Scrambled Eggs", "Category": "Eggs", "Price": 330, "Attributes": "egg", "Addon_Group_Name": "" }, { "Name": "Anda Bhurji", "Category": "Eggs", "Price": 300, "Attributes": "egg", "Addon_Group_Name": "" }, { "Name": "French Toast- Original With Cinnamon", "Category": "Eggs", "Price": 330, "Attributes": "veg", "Addon_Group_Name": "" }, { "Name": "Mushroom on Toast", "Category": "Small Bites", "Price": 380, "Attributes": "veg", "Addon_Group_Name": "" }, { "Name": "Avocado on Toast", "Category": "Small Bites", "Price": 420, "Attributes": "veg", "Addon_Group_Name": "" }, { "Name": "Classic Pancake", "Category": "Pancakes", "Price": 360, "Attributes": "veg", "Addon_Group_Name": "" }, { "Name": "French Fries", "Category": "Small Bites", "Price": 220, "Attributes": "veg", "Addon_Group_Name": "" }, { "Name": "Hummus with pita", "Category": "Small Bites", "Price": 330, "Attributes": "veg", "Addon_Group_Name": "" }, { "Name": "Aglio E Olio", "Category": "Pasta", "Price": 520, "Attributes": "veg", "Addon_Group_Name": "Add On For Pasta" }, { "Name": "Arrabiata Pasta", "Category": "Pasta", "Price": 520, "Attributes": "veg", "Addon_Group_Name": "Add On For Pasta" }, { "Name": "Creamy Mushroom", "Category": "Pasta", "Price": 520, "Attributes": "veg", "Addon_Group_Name": "Add On For Pasta" }, { "Name": "Alfredo Pasta", "Category": "Pasta", "Price": 520, "Attributes": "veg", "Addon_Group_Name": "Add On For Pasta" }, { "Name": "Americano", "Category": "Coffee", "Price": 180, "Attributes": "veg", "Addon_Group_Name": "" }, { "Name": "Espresso", "Category": "Coffee", "Price": 160, "Attributes": "veg", "Addon_Group_Name": "" }, { "Name": "Cappuccino", "Category": "Coffee", "Price": 200, "Attributes": "veg", "Addon_Group_Name": "Add On Coffee" }, { "Name": "Cafe Latte", "Category": "Coffee", "Price": 200, "Attributes": "veg", "Addon_Group_Name": "Add On Coffee" }, { "Name": "Flat White", "Category": "Coffee", "Price": 220, "Attributes": "veg", "Addon_Group_Name": "" }, { "Name": "Mocha", "Category": "Coffee", "Price": 230, "Attributes": "veg", "Addon_Group_Name": "Add On Coffee" }, { "Name": "Cold Coffee", "Category": "Non Coffee Cold", "Price": 230, "Attributes": "veg", "Addon_Group_Name": "Add On Coffee" }, { "Name": "Cookie", "Category": "Small Bites", "Price": 30, "Attributes": "veg", "Addon_Group_Name": "" }, { "Name": "Shakshuka", "Category": "Eggs", "Price": 380, "Attributes": "egg", "Addon_Group_Name": "" }, { "Name": "Peri Peri French Fries", "Category": "Sidekicks", "Price": 240, "Attributes": "veg", "Addon_Group_Name": "" }, { "Name": "Stuffed Grilled Chicken", "Category": "Mains", "Price": 620, "Attributes": "non-veg", "Addon_Group_Name": "" } ];
-        const addons = [ { "Addon_Group_Name": "Add On For Pasta", "Addon_Item_Selection": "S", "Addon_Item_Name": "Chicken", "Addon_Item_Price": 70 }, { "Addon_Group_Name": "Add On Coffee", "Addon_Item_Selection": "M", "Addon_Item_Name": "Gingerbread", "Addon_Item_Price": 30 }, { "Addon_Group_Name": "Add On Coffee", "Addon_Item_Selection": "M", "Addon_Item_Name": "Popcorn", "Addon_Item_Price": 30 }, { "Addon_Group_Name": "Add On Coffee", "Addon_Item_Selection": "M", "Addon_Item_Name": "Vanilla", "Addon_Item_Price": 30 }, { "Addon_Group_Name": "Add On Coffee", "Addon_Item_Selection": "M", "Addon_Item_Name": "Toffee", "Addon_Item_Price": 30 }, { "Addon_Group_Name": "Add On Coffee", "Addon_Item_Selection": "M", "Addon_Item_Name": "Caramel", "Addon_Item_Price": 30 }, { "Addon_Group_Name": "Add On Coffee", "Addon_Item_Selection": "M", "Addon_Item_Name": "Chocolate", "Addon_Item_Price": 30 }, { "Addon_Group_Name": "Add On Coffee", "Addon_Item_Selection": "M", "Addon_Item_Name": "Irish", "Addon_Item_Price": 30 }, { "Addon_Group_Name": "Add On Coffee", "Addon_Item_Selection": "M", "Addon_Item_Name": "Hazelnut", "Addon_Item_Price": 30 } ];
+        // URLs for your menu data and add-ons data
+const MENU_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTlM6BGIWdct_szKaONKItArAjOzdEgw-780Qha42rhQNY4_xZ15x8VxzRzzEhlUz8CDGsSY4wbjrip/pub?gid=0&single=true&output=csv';
+const ADDONS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTlM6BGIWdct_szKaONKItArAjOzdEgw-780Qha42rhQNY4_xZ15x8VxzRzzEhlUz8CDGsSY4wbjrip/pub?gid=68309898&single=true&output=csv';
 
+let menuItems = [];
+let addons = [];
+
+/**
+ * Fetches and parses CSV data from a URL into an array of JavaScript objects.
+ * @param {string} url - The URL of the CSV file.
+ * @returns {Array<Object>} The parsed array of objects.
+ */
+async function fetchAndParseCSV(url) {
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const csvText = await response.text();
+        
+        // Split text into lines, then skip the header row (shift())
+        const lines = csvText.trim().split('\n');
+        const headers = lines.shift().split(',').map(h => h.trim());
+        
+        return lines.map(line => {
+            const values = line.split(',');
+            const item = {};
+            
+            headers.forEach((header, i) => {
+                let value = values[i].trim();
+                
+                // Convert known numerical fields (Price, Addon_Item_Price) to numbers
+                if (header === 'Price' || header === 'Addon_Item_Price') {
+                    item[header] = parseInt(value, 10) || 0; 
+                } else {
+                    item[header] = value;
+                }
+            });
+            return item;
+        });
+
+    } catch (error) {
+        console.error("Error fetching or parsing CSV:", error);
+        return []; // Return an empty array on error
+    }
+}
+
+/**
+ * Main function to load all data.
+ */
+async function loadMenuData() {
+    console.log("Loading menu items...");
+    menuItems = await fetchAndParseCSV(MENU_CSV_URL);
+    
+    console.log("Loading add-ons...");
+    addons = await fetchAndParseCSV(ADDONS_CSV_URL);
+
+    // Now, 'menuItems' and 'addons' variables are populated
+    console.log("Data loaded successfully!");
+    console.log("Menu Items:", menuItems);
+    console.log("Addons:", addons);
+
+    // You can call your main rendering function here, e.g.,
+    // renderMenu(menuItems); 
+}
+
+// Start the data loading process
+loadMenuData();
         let cart = [];
         let currentItemForModal = null;
         let editingCartItemIndex = null;
