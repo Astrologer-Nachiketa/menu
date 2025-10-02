@@ -5,7 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#d9534f">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%23d9534f' width='100' height='100'/><text y='75' font-size='75' fill='white' text-anchor='middle' x='50'>🍽️</text></svg>">
     <title>Order Menu</title>
     <style>
         /* --- Basic Setup & Fonts --- */
@@ -1046,6 +1048,49 @@
         });
 
         getTableNumberFromURL();
+        
+        // Auto-hide address bar on mobile browsers
+        function hideAddressBar() {
+            if (!window.location.hash) {
+                if (document.height < window.outerHeight) {
+                    document.body.style.height = (window.outerHeight + 50) + 'px';
+                }
+                setTimeout(() => {
+                    window.scrollTo(0, 1);
+                }, 50);
+            }
+        }
+        
+        window.addEventListener('load', hideAddressBar);
+        window.addEventListener('orientationchange', () => {
+            setTimeout(hideAddressBar, 200);
+        });
+
+        // Request fullscreen on user interaction (for Android)
+        function requestFullScreen() {
+            const elem = document.documentElement;
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen().catch(err => console.log('Fullscreen request failed:', err));
+            } else if (elem.webkitRequestFullscreen) {
+                elem.webkitRequestFullscreen();
+            } else if (elem.mozRequestFullScreen) {
+                elem.mozRequestFullScreen();
+            } else if (elem.msRequestFullscreen) {
+                elem.msRequestFullscreen();
+            }
+        }
+
+        // Trigger fullscreen on first user interaction
+        let hasInteracted = false;
+        const triggerFullScreen = () => {
+            if (!hasInteracted) {
+                hasInteracted = true;
+                requestFullScreen();
+            }
+        };
+
+        document.addEventListener('touchstart', triggerFullScreen, { once: true });
+        document.addEventListener('click', triggerFullScreen, { once: true });
         
         document.body.addEventListener('touchmove', (e) => {
             if (e.target === document.body) {
