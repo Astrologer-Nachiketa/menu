@@ -613,11 +613,23 @@
             -webkit-tap-highlight-color: transparent;
             touch-action: manipulation;
             box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
+            transition: all 0.2s ease;
         }
 
         #send-whatsapp-btn:active {
             transform: scale(0.97);
             background: #20ba5a;
+        }
+        
+        #send-whatsapp-btn.disabled-btn {
+            background: #ccc;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        
+        #send-whatsapp-btn.disabled-btn:active {
+            transform: none;
+            background: #ccc;
         }
 
         * {
@@ -965,13 +977,14 @@
 
         function showClosedOverlay(reason) {
             const overlay = document.createElement('div');
+            overlay.id = 'closed-overlay';
             overlay.style.cssText = `
                 position: fixed;
                 top: 0;
                 left: 0;
                 width: 100%;
                 height: 100%;
-                background: rgba(0, 0, 0, 0.95);
+                background: rgba(0, 0, 0, 0.75);
                 z-index: 9999;
                 display: flex;
                 flex-direction: column;
@@ -980,11 +993,15 @@
                 color: white;
                 text-align: center;
                 padding: 20px;
+                pointer-events: none;
             `;
             overlay.innerHTML = `
-                <div style="font-size: 4em; margin-bottom: 20px;">🔒</div>
-                <h2 style="font-size: 1.8em; margin-bottom: 15px;">Outlet Closed</h2>
-                <p style="font-size: 1.2em; max-width: 400px;">${reason}</p>
+                <div style="background: rgba(0, 0, 0, 0.9); padding: 30px; border-radius: 20px; pointer-events: auto;">
+                    <div style="font-size: 4em; margin-bottom: 20px;">🔒</div>
+                    <h2 style="font-size: 1.8em; margin-bottom: 15px;">Outlet Closed</h2>
+                    <p style="font-size: 1.2em; max-width: 400px;">${reason}</p>
+                    <p style="font-size: 0.9em; margin-top: 15px; opacity: 0.8;">You can browse the menu but cannot place orders</p>
+                </div>
             `;
             document.body.appendChild(overlay);
             outletOpen = false;
@@ -998,23 +1015,10 @@
             const statusCheck = checkOutletStatus();
             console.log("Status check result:", statusCheck);
             
-            if (!statusCheck.open) {
-                showClosedOverlay(statusCheck.reason);
-                menuItems = await fetchAndParseCSV(MENU_CSV_URL);
-                addons = await fetchAndParseCSV(ADDONS_CSV_URL);
-                return;
-            }
-            
             const locationCheck = await checkUserLocation();
             console.log("Location check result:", locationCheck);
             
-            if (!locationCheck.allowed) {
-                showClosedOverlay(locationCheck.reason);
-                menuItems = await fetchAndParseCSV(MENU_CSV_URL);
-                addons = await fetchAndParseCSV(ADDONS_CSV_URL);
-                return;
-            }
-            
+            // Load menu data regardless of status
             console.log("Loading menu items...");
             menuItems = await fetchAndParseCSV(MENU_CSV_URL);
             
@@ -1022,6 +1026,17 @@
             addons = await fetchAndParseCSV(ADDONS_CSV_URL);
 
             console.log("Data loaded successfully!");
+            
+            // Show overlay if closed but allow browsing
+            if (!statusCheck.open) {
+                showClosedOverlay(statusCheck.reason);
+                return;
+            }
+            
+            if (!locationCheck.allowed) {
+                showClosedOverlay(locationCheck.reason);
+                return;
+            }
         }
 
         function getTableNumberFromURL() {
@@ -1072,9 +1087,7 @@
                 itemCard.className = 'item-card';
 
                 let actionHtml;
-                if (!outletOpen) {
-                    actionHtml = `<button class="add-button" disabled style="opacity: 0.5; cursor: not-allowed;">Closed</button>`;
-                } else if (itemInCart) {
+                if (itemInCart) {
                     actionHtml = `<div class="item-quantity-control"><button class="decrease-item-qty" data-item-name="${item.Name}">-</button><span>${itemInCart.quantity}</span><button class="increase-item-qty" data-item-name="${item.Name}">+</button></div>`;
                 } else {
                     actionHtml = `<button class="add-button" data-item-name="${item.Name}">ADD</button>`;
@@ -1382,6 +1395,12 @@
         });
 
         sendWhatsappBtn.addEventListener('click', async () => {
+            // Block if outlet is closed
+            if (!outletOpen) {
+                alert('Sorry, the outlet is currently closed. You cannot place orders at this time.');
+                return;
+            }
+            
             const statusDiv = document.getElementById('final-check-status');
             sendWhatsappBtn.disabled = true;
             sendWhatsappBtn.style.opacity = '0.6';
