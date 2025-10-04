@@ -1243,15 +1243,28 @@
                 const discountInfo = config.discountCodes[appliedDiscount];
                 if (discountInfo) {
                     const discountPercent = parseFloat(discountInfo.discount.replace('%', '')) / 100;
-                    const category = discountInfo.category.toLowerCase();
+                    const category = discountInfo.category.toLowerCase().trim();
+                    
+                    console.log('Applying discount:', appliedDiscount);
+                    console.log('Discount category:', category);
+                    console.log('Discount percent:', discountPercent);
                     
                     if (category === 'all') {
                         discount = subtotal * discountPercent;
+                        console.log('Applied to all items. Discount:', discount);
                     } else {
+                        // Check each cart item's category (case-insensitive)
                         const categoryTotal = cart
-                            .filter(item => item.Category.toLowerCase() === category)
+                            .filter(item => {
+                                const itemCategory = (item.Category || '').toLowerCase().trim();
+                                const matches = itemCategory === category;
+                                console.log(`Item: ${item.Name}, Category: "${itemCategory}", Matches "${category}": ${matches}`);
+                                return matches;
+                            })
                             .reduce((sum, item) => sum + item.subtotal, 0);
+                        
                         discount = categoryTotal * discountPercent;
+                        console.log(`Applied to category "${category}". Category total: ${categoryTotal}, Discount: ${discount}`);
                     }
                 }
             }
@@ -1315,7 +1328,7 @@
         }
 
         function applyDiscountCode() {
-            const code = document.getElementById('discount-code-input').value.trim().toUpperCase();
+            const code = document.getElementById('discount-code-input').value.trim();
             const messageEl = document.getElementById('discount-message');
             
             if (!code) {
@@ -1324,7 +1337,20 @@
                 return;
             }
             
-            if (!config.discountCodes || !config.discountCodes[code]) {
+            console.log('Trying to apply code:', code);
+            console.log('Available discount codes:', config.discountCodes);
+            
+            // Try both original case and uppercase
+            let discountCode = code;
+            let discountInfo = config.discountCodes ? config.discountCodes[code] : null;
+            
+            if (!discountInfo) {
+                discountCode = code.toUpperCase();
+                discountInfo = config.discountCodes ? config.discountCodes[discountCode] : null;
+            }
+            
+            if (!discountInfo) {
+                console.log('Code not found in config');
                 messageEl.style.color = '#d9534f';
                 messageEl.textContent = 'Invalid discount code';
                 appliedDiscount = null;
@@ -1332,10 +1358,33 @@
                 return;
             }
             
-            appliedDiscount = code;
-            const discountInfo = config.discountCodes[code];
+            console.log('Found discount info:', discountInfo);
+            
+            const category = discountInfo.category.toLowerCase().trim();
+            
+            // Check if any items in cart match the discount category
+            let hasMatchingItems = false;
+            if (category === 'all') {
+                hasMatchingItems = cart.length > 0;
+            } else {
+                hasMatchingItems = cart.some(item => {
+                    const itemCategory = (item.Category || '').toLowerCase().trim();
+                    console.log(`Checking item "${item.Name}" - Category: "${itemCategory}" vs Required: "${category}"`);
+                    return itemCategory === category;
+                });
+            }
+            
+            if (!hasMatchingItems) {
+                messageEl.style.color = '#d9534f';
+                messageEl.textContent = `No ${category === 'all' ? 'items' : category} items in cart`;
+                appliedDiscount = null;
+                renderCartModal();
+                return;
+            }
+            
+            appliedDiscount = discountCode;
             messageEl.style.color = '#25D366';
-            messageEl.textContent = `✓ ${discountInfo.discount} discount applied!`;
+            messageEl.textContent = `✓ ${discountInfo.discount} discount applied on ${category === 'all' ? 'all items' : category}!`;
             renderCartModal();
         }
 
