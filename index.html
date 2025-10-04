@@ -676,6 +676,11 @@
                 <div class="modal-body" id="cart-modal-body"></div>
                 <div class="totals-summary" id="cart-totals-summary"></div>
                 <div style="padding: 0 20px 15px 20px;">
+                    <div style="display: flex; gap: 8px; margin-bottom: 15px;">
+                        <input type="text" id="discount-code-input" placeholder="Discount Code" style="flex: 1; padding: 12px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 1em;">
+                        <button id="apply-discount-btn" style="background: var(--primary-color); color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 700; cursor: pointer; min-width: 80px;">Apply</button>
+                    </div>
+                    <div id="discount-message" style="font-size: 0.9em; margin-bottom: 10px; text-align: center;"></div>
                     <textarea id="general-instructions" class="instructions" placeholder="Any general instructions? (e.g., less spicy)"></textarea>
                 </div>
                 <div class="modal-footer" id="cart-modal-footer">
@@ -692,17 +697,22 @@
 
         const GST_RATE = 0.05; // 5% GST
 
-        // URLs for your menu data and add-ons data
+        // URLs for your data
         const MENU_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTlM6BGIWdct_szKaONKItArAjOzdEgw-780Qha42rhQNY4_xZ15x8VxzRzzEhlUz8CDGsSY4wbjrip/pub?gid=0&single=true&output=csv';
         const ADDONS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTlM6BGIWdct_szKaONKItArAjOzdEgw-780Qha42rhQNY4_xZ15x8VxzRzzEhlUz8CDGsSY4wbjrip/pub?gid=68309898&single=true&output=csv';
+        const CONFIG_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTlM6BGIWdct_szKaONKItArAjOzdEgw-780Qha42rhQNY4_xZ15x8VxzRzzEhlUz8CDGsSY4wbjrip/pub?gid=864388739&single=true&output=csv';
 
         let menuItems = [];
         let addons = [];
+        let config = {};
         let cart = [];
         let currentItemForModal = null;
         let editingCartItemIndex = null;
         let activeCategory = null;
         let tableNumber = null;
+        let appliedDiscount = null;
+        let userLocation = null;
+        let outletOpen = true;
         
         const categoryListUl = document.getElementById('category-list-ul');
         const itemListMain = document.getElementById('item-list-main');
@@ -753,7 +763,198 @@
             }
         }
 
+        async function fetchConfig() {
+            try {
+                const response = await fetch(CONFIG_CSV_URL);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                
+                const csvText = await response.text();
+                const lines = csvText.trim().split('\n');
+                lines.shift(); // Remove header
+                
+                const configObj = {};
+                lines.forEach(line => {
+                    // Handle JSON values with commas by finding first comma only
+                    const firstCommaIndex = line.indexOf(',');
+                    if (firstCommaIndex === -1) return;
+                    
+                    const key = line.substring(0, firstCommaIndex).trim();
+                    const value = line.substring(firstCommaIndex + 1).trim();
+                    
+                    if (key && value) {
+                        configObj[key] = value;
+                    }
+                });
+                
+                // Parse discount codes JSON
+                if (configObj['discount code']) {
+                    try {
+                        // Remove any surrounding quotes
+                        let jsonStr = configObj['discount code'].replace(/^"|"$/g, '');
+                        // Replace escaped quotes
+                        jsonStr = jsonStr.replace(/""/g, '"');
+                        configObj.discountCodes = JSON.parse(jsonStr);
+                        console.log('Discount codes loaded:', configObj.discountCodes);
+                    } catch (e) {
+                        console.error('Error parsing discount codes:', e);
+                        console.error('Raw discount code string:', configObj['discount code']);
+                        configObj.discountCodes = {};
+                    }
+                }
+                
+                // Parse location
+                if (configObj['Lat,Long']) {
+                    const [lat, lng] = configObj['Lat,Long'].split(',').map(s => parseFloat(s.trim()));
+                    configObj.outletLocation = { lat, lng };
+                }
+                
+                // Parse delivery radius
+                if (configObj['gps coordinate']) {
+                    configObj.deliveryRadius = parseFloat(configObj['gps coordinate'].replace(/[^\d.]/g, ''));
+                }
+                
+                console.log('Full config loaded:', configObj);
+                return configObj;
+            } catch (error) {
+                console.error("Error fetching config:", error);
+                return {};
+            }
+        }
+
+        function checkOutletStatus() {
+            if (!config['on time'] || !config['off time']) return true;
+            
+            const now = new Date();
+            const currentTime = now.getHours() * 60 + now.getMinutes();
+            const currentDay = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'][now.getDay()];
+            const currentDate = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
+            
+            // Check time
+            const [onHour, onMin] = config['on time'].split(':').map(Number);
+            const [offHour, offMin] = config['off time'].split(':').map(Number);
+            const onTime = onHour * 60 + onMin;
+            const offTime = offHour * 60 + offMin;
+            
+            if (currentTime < onTime || currentTime > offTime) {
+                return { open: false, reason: `We're open from ${config['on time']} to ${config['off time']}` };
+            }
+            
+            // Check off days
+            if (config['off days']) {
+                const offDays = config['off days'].toLowerCase().split(',').map(d => d.trim());
+                if (offDays.includes(currentDay)) {
+                    return { open: false, reason: "We're closed today" };
+                }
+            }
+            
+            // Check holidays
+            if (config['holidays']) {
+                const holidays = config['holidays'].split(',').map(d => d.trim());
+                if (holidays.includes(currentDate)) {
+                    return { open: false, reason: "We're closed for the holiday" };
+                }
+            }
+            
+            return { open: true };
+        }
+
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371; // Earth's radius in km
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        async function checkUserLocation() {
+            if (!config.outletLocation || !config.deliveryRadius) return true;
+            
+            return new Promise((resolve) => {
+                if (!navigator.geolocation) {
+                    resolve({ allowed: true });
+                    return;
+                }
+                
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        userLocation = {
+                            lat: position.coords.latitude,
+                            lng: position.coords.longitude
+                        };
+                        
+                        const distance = calculateDistance(
+                            userLocation.lat,
+                            userLocation.lng,
+                            config.outletLocation.lat,
+                            config.outletLocation.lng
+                        );
+                        
+                        if (distance > config.deliveryRadius) {
+                            resolve({ 
+                                allowed: false, 
+                                reason: `You are ${distance.toFixed(1)}km away. We deliver within ${config.deliveryRadius}km.` 
+                            });
+                        } else {
+                            resolve({ allowed: true });
+                        }
+                    },
+                    (error) => {
+                        console.log('Location access denied or unavailable:', error);
+                        resolve({ allowed: true }); // Allow ordering if location denied
+                    }
+                );
+            });
+        }
+
+        function showClosedOverlay(reason) {
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.95);
+                z-index: 9999;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                color: white;
+                text-align: center;
+                padding: 20px;
+            `;
+            overlay.innerHTML = `
+                <div style="font-size: 4em; margin-bottom: 20px;">🔒</div>
+                <h2 style="font-size: 1.8em; margin-bottom: 15px;">Outlet Closed</h2>
+                <p style="font-size: 1.2em; max-width: 400px;">${reason}</p>
+            `;
+            document.body.appendChild(overlay);
+            outletOpen = false;
+        }
+
         async function loadMenuData() {
+            console.log("Loading configuration...");
+            config = await fetchConfig();
+            console.log("Config loaded:", config);
+            
+            // Check outlet status
+            const statusCheck = checkOutletStatus();
+            if (!statusCheck.open) {
+                showClosedOverlay(statusCheck.reason);
+                return;
+            }
+            
+            // Check user location
+            const locationCheck = await checkUserLocation();
+            if (!locationCheck.allowed) {
+                showClosedOverlay(locationCheck.reason);
+                return;
+            }
+            
             console.log("Loading menu items...");
             menuItems = await fetchAndParseCSV(MENU_CSV_URL);
             
@@ -813,7 +1014,9 @@
                 itemCard.className = 'item-card';
 
                 let actionHtml;
-                if (itemInCart) {
+                if (!outletOpen) {
+                    actionHtml = `<button class="add-button" disabled style="opacity: 0.5; cursor: not-allowed;">Closed</button>`;
+                } else if (itemInCart) {
                     actionHtml = `<div class="item-quantity-control"><button class="decrease-item-qty" data-item-name="${item.Name}">-</button><span>${itemInCart.quantity}</span><button class="increase-item-qty" data-item-name="${item.Name}">+</button></div>`;
                 } else {
                     actionHtml = `<button class="add-button" data-item-name="${item.Name}">ADD</button>`;
@@ -952,13 +1155,13 @@
                 cartModalBody.appendChild(cartItemDiv);
             });
 
-            const { subtotal, gst, grandTotal } = calculateTotals();
+            const { subtotal, discount, gst, grandTotal } = calculateTotals();
             cartTotalsSummary.innerHTML = `
                 <div class="totals-row"><span>Subtotal</span><span>₹${subtotal.toFixed(2)}</span></div>
+                ${discount > 0 ? `<div class="totals-row" style="color: #25D366;"><span>Discount (${appliedDiscount})</span><span>-₹${discount.toFixed(2)}</span></div>` : ''}
                 <div class="totals-row"><span>GST (5%)</span><span>₹${gst.toFixed(2)}</span></div>
                 <div class="totals-row grand-total"><span>Grand Total</span><span>₹${grandTotal.toFixed(2)}</span></div>
             `;
-            
             cartModalBody.querySelectorAll('.cart-edit-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     const cartIndex = parseInt(e.target.dataset.cartIndex);
@@ -978,9 +1181,30 @@
         
         function calculateTotals() {
             const subtotal = cart.reduce((sum, item) => sum + item.subtotal, 0);
-            const gst = subtotal * GST_RATE;
-            const grandTotal = subtotal + gst;
-            return { subtotal, gst, grandTotal };
+            let discount = 0;
+            
+            if (appliedDiscount) {
+                const discountInfo = config.discountCodes[appliedDiscount];
+                if (discountInfo) {
+                    const discountPercent = parseFloat(discountInfo.discount.replace('%', '')) / 100;
+                    const category = discountInfo.category.toLowerCase();
+                    
+                    if (category === 'all') {
+                        discount = subtotal * discountPercent;
+                    } else {
+                        const categoryTotal = cart
+                            .filter(item => item.Category.toLowerCase() === category)
+                            .reduce((sum, item) => sum + item.subtotal, 0);
+                        discount = categoryTotal * discountPercent;
+                    }
+                }
+            }
+            
+            const afterDiscount = subtotal - discount;
+            const gst = afterDiscount * GST_RATE;
+            const grandTotal = afterDiscount + gst;
+            
+            return { subtotal, discount, gst, grandTotal };
         }
 
         function updateCartSummary() {
@@ -1017,9 +1241,12 @@
                 }
             });
 
-            const { subtotal, gst, grandTotal } = calculateTotals();
+            const { subtotal, discount, gst, grandTotal } = calculateTotals();
             message += `\n-----------------------------------\n`;
             message += `*Subtotal:* ₹${subtotal.toFixed(2)}\n`;
+            if (discount > 0) {
+                message += `*Discount (${appliedDiscount}):* -₹${discount.toFixed(2)}\n`;
+            }
             message += `*GST (5%):* ₹${gst.toFixed(2)}\n`;
             message += `*Grand Total: ₹${grandTotal.toFixed(2)}*\n`;
             message += `-----------------------------------\n`;
@@ -1029,6 +1256,31 @@
                 message += `\n*General Instructions:*\n_${generalInstructions}_`;
             }
             return encodeURIComponent(message);
+        }
+
+        function applyDiscountCode() {
+            const code = document.getElementById('discount-code-input').value.trim().toUpperCase();
+            const messageEl = document.getElementById('discount-message');
+            
+            if (!code) {
+                messageEl.style.color = '#d9534f';
+                messageEl.textContent = 'Please enter a discount code';
+                return;
+            }
+            
+            if (!config.discountCodes || !config.discountCodes[code]) {
+                messageEl.style.color = '#d9534f';
+                messageEl.textContent = 'Invalid discount code';
+                appliedDiscount = null;
+                renderCartModal();
+                return;
+            }
+            
+            appliedDiscount = code;
+            const discountInfo = config.discountCodes[code];
+            messageEl.style.color = '#25D366';
+            messageEl.textContent = `✓ ${discountInfo.discount} discount applied!`;
+            renderCartModal();
         }
 
         custModalOverlay.addEventListener('click', (e) => { if (e.target === custModalOverlay) closeCustomizationModal(); });
@@ -1041,9 +1293,19 @@
         });
 
         sendWhatsappBtn.addEventListener('click', () => {
+            if (!outletOpen) {
+                alert('Sorry, we are currently not accepting orders.');
+                return;
+            }
             const message = generateWhatsAppMessage();
             if (message) {
                 window.open(`https://api.whatsapp.com/send?phone=7011847629&text=${message}`, '_blank');
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (e.target && e.target.id === 'apply-discount-btn') {
+                applyDiscountCode();
             }
         });
 
