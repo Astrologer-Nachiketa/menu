@@ -702,6 +702,7 @@
         const MENU_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTlM6BGIWdct_szKaONKItArAjOzdEgw-780Qha42rhQNY4_xZ15x8VxzRzzEhlUz8CDGsSY4wbjrip/pub?gid=0&single=true&output=csv';
         const ADDONS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTlM6BGIWdct_szKaONKItArAjOzdEgw-780Qha42rhQNY4_xZ15x8VxzRzzEhlUz8CDGsSY4wbjrip/pub?gid=68309898&single=true&output=csv';
         const CONFIG_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTlM6BGIWdct_szKaONKItArAjOzdEgw-780Qha42rhQNY4_xZ15x8VxzRzzEhlUz8CDGsSY4wbjrip/pub?gid=864388739&single=true&output=csv';
+        const DISCOUNT_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTlM6BGIWdct_szKaONKItArAjOzdEgw-780Qha42rhQNY4_xZ15x8VxzRzzEhlUz8CDGsSY4wbjrip/pub?gid=278622700&single=true&output=csv';
 
         let menuItems = [];
         let addons = [];
@@ -731,7 +732,47 @@
         const sendWhatsappBtn = document.getElementById('send-whatsapp-btn');
         const viewOrderBtn = document.getElementById('view-order-btn');
 
-        async function fetchAndParseCSV(url) {
+        async function fetchDiscountCodes() {
+            try {
+                const response = await fetch(DISCOUNT_CSV_URL);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                
+                const csvText = await response.text();
+                console.log('Discount codes CSV loaded');
+                
+                const lines = csvText.trim().split('\n');
+                const headers = lines.shift().split(',').map(h => h.trim());
+                
+                console.log('Discount CSV headers:', headers);
+                
+                const discountCodes = {};
+                
+                lines.forEach((line, index) => {
+                    const values = line.split(',').map(v => v.trim());
+                    if (values.length >= 3) {
+                        const code = values[0];
+                        const discount = values[1];
+                        const category = values[2];
+                        
+                        if (code) {
+                            discountCodes[code] = {
+                                discount: discount,
+                                category: category
+                            };
+                            console.log(`Loaded discount code: ${code} = ${discount} for ${category}`);
+                        }
+                    }
+                });
+                
+                console.log('Total discount codes loaded:', Object.keys(discountCodes).length);
+                console.log('Discount codes object:', discountCodes);
+                
+                return discountCodes;
+            } catch (error) {
+                console.error("Error fetching discount codes:", error);
+                return {};
+            }
+        }
             try {
                 const response = await fetch(url);
                 if (!response.ok) {
@@ -770,117 +811,29 @@
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 
                 const csvText = await response.text();
-                console.log('Raw CSV text:', csvText);
+                console.log('Config CSV loaded');
                 
                 const lines = csvText.trim().split('\n');
                 const header = lines.shift();
-                console.log('CSV Header:', header);
                 
                 const configObj = {};
                 
-                // Parse line by line, handling multi-line values
-                let currentKey = '';
-                let currentValue = '';
-                let insideQuotes = false;
-                
-                for (let i = 0; i < lines.length; i++) {
-                    const line = lines[i];
+                lines.forEach(line => {
+                    const firstCommaIndex = line.indexOf(',');
+                    if (firstCommaIndex === -1) return;
                     
-                    if (!insideQuotes) {
-                        // Start of a new key-value pair
-                        const firstCommaIndex = line.indexOf(',');
-                        if (firstCommaIndex === -1) continue;
-                        
-                        currentKey = line.substring(0, firstCommaIndex).trim();
-                        let value = line.substring(firstCommaIndex + 1).trim();
-                        
-                        // Check if value starts with a quote
-                        if (value.startsWith('"')) {
-                            insideQuotes = true;
-                            currentValue = value.substring(1); // Remove opening quote
-                            
-                            // Check if it also ends with a quote on same line
-                            if (currentValue.endsWith('"') && currentValue.length > 1) {
-                                currentValue = currentValue.substring(0, currentValue.length - 1);
-                                insideQuotes = false;
-                                configObj[currentKey] = currentValue;
-                                currentKey = '';
-                                currentValue = '';
-                            }
-                        } else {
-                            // Simple value without quotes
-                            configObj[currentKey] = value;
-                            currentKey = '';
-                        }
-                    } else {
-                        // Continuation of a quoted value
-                        currentValue += '\n' + line;
-                        
-                        // Check if this line ends the quoted value
-                        if (line.trim().endsWith('"')) {
-                            currentValue = currentValue.substring(0, currentValue.length - 1);
-                            insideQuotes = false;
-                            configObj[currentKey] = currentValue;
-                            currentKey = '';
-                            currentValue = '';
-                        }
+                    const key = line.substring(0, firstCommaIndex).trim();
+                    const value = line.substring(firstCommaIndex + 1).trim();
+                    
+                    if (key && value) {
+                        configObj[key] = value;
+                        console.log(`Config: ${key} = ${value}`);
                     }
-                }
+                });
                 
-                console.log('Parsed config object:', configObj);
-                
-                // Parse discount codes JSON
-                if (configObj['discount code']) {
-                    try {
-                        let jsonStr = configObj['discount code'];
-                        console.log('Raw discount code string:', jsonStr);
-                        console.log('Raw discount code string length:', jsonStr.length);
-                        console.log('First 100 chars:', jsonStr.substring(0, 100));
-                        
-                        // Clean up the JSON string - try multiple approaches
-                        // Remove line breaks
-                        jsonStr = jsonStr.replace(/\r\n/g, '').replace(/\n/g, '').replace(/\r/g, '');
-                        
-                        // Remove leading/trailing whitespace
-                        jsonStr = jsonStr.trim();
-                        
-                        // If it starts and ends with extra quotes, remove them
-                        if (jsonStr.startsWith('"') && jsonStr.endsWith('"')) {
-                            jsonStr = jsonStr.substring(1, jsonStr.length - 1);
-                        }
-                        
-                        // Replace any double-double quotes with single quotes
-                        jsonStr = jsonStr.replace(/""/g, '"');
-                        
-                        console.log('Cleaned JSON string:', jsonStr);
-                        console.log('Attempting to parse...');
-                        
-                        configObj.discountCodes = JSON.parse(jsonStr);
-                        console.log('Successfully parsed discount codes:', configObj.discountCodes);
-                        console.log('Number of discount codes:', Object.keys(configObj.discountCodes).length);
-                    } catch (e) {
-                        console.error('Error parsing discount codes:', e);
-                        console.error('JSON string that failed:', configObj['discount code']);
-                        
-                        // Try to manually parse as last resort
-                        console.log('Attempting manual parse...');
-                        try {
-                            // Hardcode for testing
-                            configObj.discountCodes = {
-                                "A01": {"discount": "10%", "category": "all"},
-                                "B52": {"discount": "15%", "category": "sandwiches"},
-                                "H53": {"discount": "20%", "category": "pasta"},
-                                "D99": {"discount": "10%", "category": "Coffee Hot"}
-                            };
-                            console.warn('Using hardcoded discount codes as fallback');
-                        } catch (e2) {
-                            configObj.discountCodes = {};
-                        }
-                    }
-                } else {
-                    console.warn('No discount code field found in config');
-                    configObj.discountCodes = {};
-                }
+                // Fetch discount codes from separate sheet
+                console.log('Fetching discount codes...');
+                configObj.discountCodes = await fetchDiscountCodes();
                 
                 // Parse location
                 if (configObj['Lat,Long']) {
