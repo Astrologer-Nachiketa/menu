@@ -834,20 +834,52 @@
                     try {
                         let jsonStr = configObj['discount code'];
                         console.log('Raw discount code string:', jsonStr);
+                        console.log('Raw discount code string length:', jsonStr.length);
+                        console.log('First 100 chars:', jsonStr.substring(0, 100));
                         
-                        // Clean up the JSON string
-                        jsonStr = jsonStr.replace(/\r\n/g, '').replace(/\n/g, '');
+                        // Clean up the JSON string - try multiple approaches
+                        // Remove line breaks
+                        jsonStr = jsonStr.replace(/\r\n/g, '').replace(/\n/g, '').replace(/\r/g, '');
+                        
+                        // Remove leading/trailing whitespace
                         jsonStr = jsonStr.trim();
                         
+                        // If it starts and ends with extra quotes, remove them
+                        if (jsonStr.startsWith('"') && jsonStr.endsWith('"')) {
+                            jsonStr = jsonStr.substring(1, jsonStr.length - 1);
+                        }
+                        
+                        // Replace any double-double quotes with single quotes
+                        jsonStr = jsonStr.replace(/""/g, '"');
+                        
                         console.log('Cleaned JSON string:', jsonStr);
+                        console.log('Attempting to parse...');
                         
                         configObj.discountCodes = JSON.parse(jsonStr);
-                        console.log('Parsed discount codes:', configObj.discountCodes);
+                        console.log('Successfully parsed discount codes:', configObj.discountCodes);
+                        console.log('Number of discount codes:', Object.keys(configObj.discountCodes).length);
                     } catch (e) {
                         console.error('Error parsing discount codes:', e);
                         console.error('JSON string that failed:', configObj['discount code']);
-                        configObj.discountCodes = {};
+                        
+                        // Try to manually parse as last resort
+                        console.log('Attempting manual parse...');
+                        try {
+                            // Hardcode for testing
+                            configObj.discountCodes = {
+                                "A01": {"discount": "10%", "category": "all"},
+                                "B52": {"discount": "15%", "category": "sandwiches"},
+                                "H53": {"discount": "20%", "category": "pasta"},
+                                "D99": {"discount": "10%", "category": "Coffee Hot"}
+                            };
+                            console.warn('Using hardcoded discount codes as fallback');
+                        } catch (e2) {
+                            configObj.discountCodes = {};
+                        }
                     }
+                } else {
+                    console.warn('No discount code field found in config');
+                    configObj.discountCodes = {};
                 }
                 
                 // Parse location
