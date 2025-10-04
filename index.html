@@ -898,14 +898,19 @@
         }
 
         async function checkUserLocation() {
-            if (!config.outletLocation || !config.deliveryRadius) return true;
+            if (!config.outletLocation || !config.deliveryRadius) {
+                console.log("No location config, skipping location check");
+                return { allowed: true };
+            }
             
             return new Promise((resolve) => {
                 if (!navigator.geolocation) {
+                    console.log("Geolocation not supported");
                     resolve({ allowed: true });
                     return;
                 }
                 
+                console.log("Requesting user location...");
                 navigator.geolocation.getCurrentPosition(
                     (position) => {
                         userLocation = {
@@ -913,12 +918,18 @@
                             lng: position.coords.longitude
                         };
                         
+                        console.log("User location:", userLocation);
+                        console.log("Outlet location:", config.outletLocation);
+                        
                         const distance = calculateDistance(
                             userLocation.lat,
                             userLocation.lng,
                             config.outletLocation.lat,
                             config.outletLocation.lng
                         );
+                        
+                        console.log("Distance:", distance.toFixed(2), "km");
+                        console.log("Delivery radius:", config.deliveryRadius, "km");
                         
                         if (distance > config.deliveryRadius) {
                             resolve({ 
@@ -971,15 +982,25 @@
             
             // Check outlet status
             const statusCheck = checkOutletStatus();
+            console.log("Status check result:", statusCheck);
+            
             if (!statusCheck.open) {
                 showClosedOverlay(statusCheck.reason);
+                // Still load menu but disable ordering
+                menuItems = await fetchAndParseCSV(MENU_CSV_URL);
+                addons = await fetchAndParseCSV(ADDONS_CSV_URL);
                 return;
             }
             
             // Check user location
             const locationCheck = await checkUserLocation();
+            console.log("Location check result:", locationCheck);
+            
             if (!locationCheck.allowed) {
                 showClosedOverlay(locationCheck.reason);
+                // Still load menu but disable ordering
+                menuItems = await fetchAndParseCSV(MENU_CSV_URL);
+                addons = await fetchAndParseCSV(ADDONS_CSV_URL);
                 return;
             }
             
