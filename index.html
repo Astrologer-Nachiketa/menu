@@ -898,6 +898,12 @@
         }
 
         async function checkUserLocation() {
+            // Check if GPS verification is enabled
+            if (config['gps check'] && config['gps check'].toLowerCase() === 'no') {
+                console.log("GPS check disabled in config, skipping location verification");
+                return { allowed: true };
+            }
+            
             if (!config.outletLocation || !config.deliveryRadius) {
                 console.log("No location config, skipping location check");
                 return { allowed: true };
