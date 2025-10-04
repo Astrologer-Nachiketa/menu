@@ -984,7 +984,7 @@
                 left: 0;
                 width: 100%;
                 height: 100%;
-                background: rgba(0, 0, 0, 0.75);
+                background: rgba(0, 0, 0, 0.85);
                 z-index: 9999;
                 display: flex;
                 flex-direction: column;
@@ -994,13 +994,15 @@
                 text-align: center;
                 padding: 20px;
                 pointer-events: none;
+                backdrop-filter: blur(3px);
+                -webkit-backdrop-filter: blur(3px);
             `;
             overlay.innerHTML = `
-                <div style="background: rgba(0, 0, 0, 0.9); padding: 30px; border-radius: 20px; pointer-events: auto;">
+                <div style="background: rgba(0, 0, 0, 0.95); padding: 40px 30px; border-radius: 20px; pointer-events: auto; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5); max-width: 90%; border: 2px solid rgba(217, 83, 79, 0.5);">
                     <div style="font-size: 4em; margin-bottom: 20px;">🔒</div>
-                    <h2 style="font-size: 1.8em; margin-bottom: 15px;">Outlet Closed</h2>
-                    <p style="font-size: 1.2em; max-width: 400px;">${reason}</p>
-                    <p style="font-size: 0.9em; margin-top: 15px; opacity: 0.8;">You can browse the menu but cannot place orders</p>
+                    <h2 style="font-size: 1.8em; margin-bottom: 15px; font-weight: 700;">Outlet Closed</h2>
+                    <p style="font-size: 1.2em; max-width: 400px; line-height: 1.4;">${reason}</p>
+                    <p style="font-size: 0.95em; margin-top: 20px; opacity: 0.9; color: #ffeb3b;">You can browse the menu but cannot place orders</p>
                 </div>
             `;
             document.body.appendChild(overlay);
