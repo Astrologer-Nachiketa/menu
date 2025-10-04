@@ -770,35 +770,82 @@
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 
                 const csvText = await response.text();
+                console.log('Raw CSV text:', csvText);
+                
                 const lines = csvText.trim().split('\n');
-                lines.shift(); // Remove header
+                const header = lines.shift();
+                console.log('CSV Header:', header);
                 
                 const configObj = {};
-                lines.forEach(line => {
-                    // Handle JSON values with commas by finding first comma only
-                    const firstCommaIndex = line.indexOf(',');
-                    if (firstCommaIndex === -1) return;
+                
+                // Parse line by line, handling multi-line values
+                let currentKey = '';
+                let currentValue = '';
+                let insideQuotes = false;
+                
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i];
                     
-                    const key = line.substring(0, firstCommaIndex).trim();
-                    const value = line.substring(firstCommaIndex + 1).trim();
-                    
-                    if (key && value) {
-                        configObj[key] = value;
+                    if (!insideQuotes) {
+                        // Start of a new key-value pair
+                        const firstCommaIndex = line.indexOf(',');
+                        if (firstCommaIndex === -1) continue;
+                        
+                        currentKey = line.substring(0, firstCommaIndex).trim();
+                        let value = line.substring(firstCommaIndex + 1).trim();
+                        
+                        // Check if value starts with a quote
+                        if (value.startsWith('"')) {
+                            insideQuotes = true;
+                            currentValue = value.substring(1); // Remove opening quote
+                            
+                            // Check if it also ends with a quote on same line
+                            if (currentValue.endsWith('"') && currentValue.length > 1) {
+                                currentValue = currentValue.substring(0, currentValue.length - 1);
+                                insideQuotes = false;
+                                configObj[currentKey] = currentValue;
+                                currentKey = '';
+                                currentValue = '';
+                            }
+                        } else {
+                            // Simple value without quotes
+                            configObj[currentKey] = value;
+                            currentKey = '';
+                        }
+                    } else {
+                        // Continuation of a quoted value
+                        currentValue += '\n' + line;
+                        
+                        // Check if this line ends the quoted value
+                        if (line.trim().endsWith('"')) {
+                            currentValue = currentValue.substring(0, currentValue.length - 1);
+                            insideQuotes = false;
+                            configObj[currentKey] = currentValue;
+                            currentKey = '';
+                            currentValue = '';
+                        }
                     }
-                });
+                }
+                
+                console.log('Parsed config object:', configObj);
                 
                 // Parse discount codes JSON
                 if (configObj['discount code']) {
                     try {
-                        // Remove any surrounding quotes
-                        let jsonStr = configObj['discount code'].replace(/^"|"$/g, '');
-                        // Replace escaped quotes
-                        jsonStr = jsonStr.replace(/""/g, '"');
+                        let jsonStr = configObj['discount code'];
+                        console.log('Raw discount code string:', jsonStr);
+                        
+                        // Clean up the JSON string
+                        jsonStr = jsonStr.replace(/\r\n/g, '').replace(/\n/g, '');
+                        jsonStr = jsonStr.trim();
+                        
+                        console.log('Cleaned JSON string:', jsonStr);
+                        
                         configObj.discountCodes = JSON.parse(jsonStr);
-                        console.log('Discount codes loaded:', configObj.discountCodes);
+                        console.log('Parsed discount codes:', configObj.discountCodes);
                     } catch (e) {
                         console.error('Error parsing discount codes:', e);
-                        console.error('Raw discount code string:', configObj['discount code']);
+                        console.error('JSON string that failed:', configObj['discount code']);
                         configObj.discountCodes = {};
                     }
                 }
