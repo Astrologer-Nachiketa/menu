@@ -758,10 +758,14 @@
                         const category = values[2];
                         
                         if (code) {
-                            discountCodes[code] = {
+                            // Support multiple discounts per code
+                            if (!discountCodes[code]) {
+                                discountCodes[code] = [];
+                            }
+                            discountCodes[code].push({
                                 discount: discount,
                                 category: category
-                            };
+                            });
                             console.log(`Loaded discount code: ${code} = ${discount} for ${category}`);
                         }
                     }
@@ -1255,23 +1259,26 @@
             let discount = 0;
             
             if (appliedDiscount) {
-                const discountInfo = config.discountCodes[appliedDiscount];
-                if (discountInfo) {
-                    const discountPercent = parseFloat(discountInfo.discount.replace('%', '')) / 100;
-                    const category = discountInfo.category.toLowerCase().trim();
-                    
-                    if (category === 'all') {
-                        discount = subtotal * discountPercent;
-                    } else {
-                        const categoryTotal = cart
-                            .filter(item => {
-                                const itemCategory = (item.Category || '').toLowerCase().trim();
-                                return itemCategory === category;
-                            })
-                            .reduce((sum, item) => sum + item.subtotal, 0);
+                const discountInfoArray = config.discountCodes[appliedDiscount];
+                if (discountInfoArray && Array.isArray(discountInfoArray)) {
+                    // Apply all discounts for this code
+                    discountInfoArray.forEach(discountInfo => {
+                        const discountPercent = parseFloat(discountInfo.discount.replace('%', '')) / 100;
+                        const category = discountInfo.category.toLowerCase().trim();
                         
-                        discount = categoryTotal * discountPercent;
-                    }
+                        if (category === 'all') {
+                            discount += subtotal * discountPercent;
+                        } else {
+                            const categoryTotal = cart
+                                .filter(item => {
+                                    const itemCategory = (item.Category || '').toLowerCase().trim();
+                                    return itemCategory === category;
+                                })
+                                .reduce((sum, item) => sum + item.subtotal, 0);
+                            
+                            discount += categoryTotal * discountPercent;
+                        }
+                    });
                 }
             }
             
@@ -1344,14 +1351,14 @@
             }
             
             let discountCode = code;
-            let discountInfo = config.discountCodes ? config.discountCodes[code] : null;
+            let discountInfoArray = config.discountCodes ? config.discountCodes[code] : null;
             
-            if (!discountInfo) {
+            if (!discountInfoArray) {
                 discountCode = code.toUpperCase();
-                discountInfo = config.discountCodes ? config.discountCodes[discountCode] : null;
+                discountInfoArray = config.discountCodes ? config.discountCodes[discountCode] : null;
             }
             
-            if (!discountInfo) {
+            if (!discountInfoArray || !Array.isArray(discountInfoArray)) {
                 messageEl.style.color = '#d9534f';
                 messageEl.textContent = 'Invalid discount code';
                 appliedDiscount = null;
@@ -1359,21 +1366,34 @@
                 return;
             }
             
-            const category = discountInfo.category.toLowerCase().trim();
-            
+            // Check if any discount rules match items in cart
             let hasMatchingItems = false;
-            if (category === 'all') {
-                hasMatchingItems = cart.length > 0;
-            } else {
-                hasMatchingItems = cart.some(item => {
-                    const itemCategory = (item.Category || '').toLowerCase().trim();
-                    return itemCategory === category;
-                });
-            }
+            let applicableCategories = [];
+            
+            discountInfoArray.forEach(discountInfo => {
+                const category = discountInfo.category.toLowerCase().trim();
+                
+                if (category === 'all') {
+                    if (cart.length > 0) {
+                        hasMatchingItems = true;
+                        applicableCategories.push('all items');
+                    }
+                } else {
+                    const hasCategory = cart.some(item => {
+                        const itemCategory = (item.Category || '').toLowerCase().trim();
+                        return itemCategory === category;
+                    });
+                    if (hasCategory) {
+                        hasMatchingItems = true;
+                        applicableCategories.push(category);
+                    }
+                }
+            });
             
             if (!hasMatchingItems) {
+                const allCategories = discountInfoArray.map(d => d.category).join(', ');
                 messageEl.style.color = '#d9534f';
-                messageEl.textContent = `No ${category === 'all' ? 'items' : category} items in cart`;
+                messageEl.textContent = `No applicable items in cart for: ${allCategories}`;
                 appliedDiscount = null;
                 renderCartModal();
                 return;
@@ -1381,7 +1401,10 @@
             
             appliedDiscount = discountCode;
             messageEl.style.color = '#25D366';
-            messageEl.textContent = `✓ ${discountInfo.discount} discount applied on ${category === 'all' ? 'all items' : category}!`;
+            
+            // Show all applied discounts
+            const discountSummary = discountInfoArray.map(d => `${d.discount} on ${d.category}`).join(', ');
+            messageEl.textContent = `✓ Discounts applied: ${discountSummary}`;
             renderCartModal();
         }
 
