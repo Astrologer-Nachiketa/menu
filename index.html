@@ -773,6 +773,8 @@
                 return {};
             }
         }
+
+        async function fetchAndParseCSV(url) {
             try {
                 const response = await fetch(url);
                 if (!response.ok) {
