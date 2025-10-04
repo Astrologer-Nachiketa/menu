@@ -10,7 +10,6 @@
     <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%23d9534f' width='100' height='100'/><text y='75' font-size='75' fill='white' text-anchor='middle' x='50'>🍽️</text></svg>">
     <title>Order Menu</title>
     <style>
-        /* --- Basic Setup & Fonts --- */
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
 
         :root {
@@ -56,7 +55,6 @@
             background: #fff;
         }
 
-        /* --- Main Layout --- */
         .app-container {
             display: flex;
             height: 100%;
@@ -260,7 +258,6 @@
             font-size: 1em;
         }
 
-        /* --- Cart Summary --- */
         .cart-summary {
             position: fixed;
             bottom: 0;
@@ -312,7 +309,6 @@
             100% { transform: scale(1); }
         }
 
-        /* --- Modals --- */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -505,7 +501,6 @@
             background: #c74943;
         }
         
-        /* --- Cart Modal Specific Styles --- */
         #cart-modal-body { 
             padding: 0;
             -webkit-overflow-scrolling: touch;
@@ -625,19 +620,16 @@
             background: #20ba5a;
         }
 
-        /* Smooth scrolling */
         * {
             -webkit-overflow-scrolling: touch;
             scroll-behavior: smooth;
         }
 
-        /* Better input focus for accessibility */
         input:focus, textarea:focus, button:focus {
             outline: 2px solid var(--primary-color);
             outline-offset: 2px;
         }
 
-        /* Prevent text selection on buttons */
         button {
             -webkit-user-select: none;
             user-select: none;
@@ -696,9 +688,8 @@
     <script>
     document.addEventListener('DOMContentLoaded', () => {
 
-        const GST_RATE = 0.05; // 5% GST
+        const GST_RATE = 0.05;
 
-        // URLs for your data
         const MENU_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTlM6BGIWdct_szKaONKItArAjOzdEgw-780Qha42rhQNY4_xZ15x8VxzRzzEhlUz8CDGsSY4wbjrip/pub?gid=0&single=true&output=csv';
         const ADDONS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTlM6BGIWdct_szKaONKItArAjOzdEgw-780Qha42rhQNY4_xZ15x8VxzRzzEhlUz8CDGsSY4wbjrip/pub?gid=68309898&single=true&output=csv';
         const CONFIG_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTlM6BGIWdct_szKaONKItArAjOzdEgw-780Qha42rhQNY4_xZ15x8VxzRzzEhlUz8CDGsSY4wbjrip/pub?gid=864388739&single=true&output=csv';
@@ -833,17 +824,14 @@
                     }
                 });
                 
-                // Fetch discount codes from separate sheet
                 console.log('Fetching discount codes...');
                 configObj.discountCodes = await fetchDiscountCodes();
                 
-                // Parse location
                 if (configObj['Lat,Long']) {
                     const [lat, lng] = configObj['Lat,Long'].split(',').map(s => parseFloat(s.trim()));
                     configObj.outletLocation = { lat, lng };
                 }
                 
-                // Parse delivery radius
                 if (configObj['gps coordinate']) {
                     configObj.deliveryRadius = parseFloat(configObj['gps coordinate'].replace(/[^\d.]/g, ''));
                 }
@@ -871,27 +859,17 @@
             console.log('Current time (minutes):', currentTime);
             console.log('Current day:', currentDay);
             console.log('Current date:', currentDate, 'or', currentDateSlash);
-            console.log('Config on time:', config['on time']);
-            console.log('Config off time:', config['off time']);
-            console.log('Config off days:', config['off days']);
-            console.log('Config holidays:', config['holidays']);
             
-            // Parse opening time
             const onTimeParts = config['on time'].split(':');
             const onHour = parseInt(onTimeParts[0]);
             const onMin = onTimeParts[1] ? parseInt(onTimeParts[1]) : 0;
             const onTime = onHour * 60 + onMin;
             
-            // Parse closing time
             const offTimeParts = config['off time'].split(':');
             const offHour = parseInt(offTimeParts[0]);
             const offMin = offTimeParts[1] ? parseInt(offTimeParts[1]) : 0;
             const offTime = offHour * 60 + offMin;
             
-            console.log('Parsed on time (minutes):', onTime);
-            console.log('Parsed off time (minutes):', offTime);
-            
-            // Check time
             if (currentTime < onTime || currentTime > offTime) {
                 return { 
                     open: false, 
@@ -899,30 +877,25 @@
                 };
             }
             
-            // Check off days
             if (config['off days']) {
                 const offDays = config['off days'].toLowerCase().split(',').map(d => d.trim());
-                console.log('Off days array:', offDays);
                 if (offDays.includes(currentDay)) {
                     return { open: false, reason: `We're closed on ${currentDay.charAt(0).toUpperCase() + currentDay.slice(1)}days` };
                 }
             }
             
-            // Check holidays (support both dash and slash formats)
             if (config['holidays']) {
                 const holidays = config['holidays'].split(',').map(d => d.trim());
-                console.log('Holidays array:', holidays);
                 if (holidays.includes(currentDate) || holidays.includes(currentDateSlash)) {
                     return { open: false, reason: "We're closed for the holiday today" };
                 }
             }
             
-            console.log('All checks passed, outlet is open');
             return { open: true };
         }
 
         function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371; // Earth's radius in km
+            const R = 6371;
             const dLat = (lat2 - lat1) * Math.PI / 180;
             const dLon = (lon2 - lon1) * Math.PI / 180;
             const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
@@ -933,11 +906,12 @@
         }
 
         async function checkUserLocation() {
-            // Check if GPS verification is enabled
-            if (config['gps check'] && config['gps check'].toLowerCase() === 'no') {
+            if (!config['gps check'] || config['gps check'].toLowerCase() === 'no') {
                 console.log("GPS check disabled in config, skipping location verification");
                 return { allowed: true };
             }
+            
+            console.log("GPS check enabled, verifying location...");
             
             if (!config.outletLocation || !config.deliveryRadius) {
                 console.log("No location config, skipping location check");
@@ -983,7 +957,7 @@
                     },
                     (error) => {
                         console.log('Location access denied or unavailable:', error);
-                        resolve({ allowed: true }); // Allow ordering if location denied
+                        resolve({ allowed: true });
                     }
                 );
             });
@@ -1021,25 +995,21 @@
             config = await fetchConfig();
             console.log("Config loaded:", config);
             
-            // Check outlet status
             const statusCheck = checkOutletStatus();
             console.log("Status check result:", statusCheck);
             
             if (!statusCheck.open) {
                 showClosedOverlay(statusCheck.reason);
-                // Still load menu but disable ordering
                 menuItems = await fetchAndParseCSV(MENU_CSV_URL);
                 addons = await fetchAndParseCSV(ADDONS_CSV_URL);
                 return;
             }
             
-            // Check user location
             const locationCheck = await checkUserLocation();
             console.log("Location check result:", locationCheck);
             
             if (!locationCheck.allowed) {
                 showClosedOverlay(locationCheck.reason);
-                // Still load menu but disable ordering
                 menuItems = await fetchAndParseCSV(MENU_CSV_URL);
                 addons = await fetchAndParseCSV(ADDONS_CSV_URL);
                 return;
@@ -1052,8 +1022,6 @@
             addons = await fetchAndParseCSV(ADDONS_CSV_URL);
 
             console.log("Data loaded successfully!");
-            console.log("Menu Items:", menuItems);
-            console.log("Addons:", addons);
         }
 
         function getTableNumberFromURL() {
@@ -1279,26 +1247,17 @@
                     const discountPercent = parseFloat(discountInfo.discount.replace('%', '')) / 100;
                     const category = discountInfo.category.toLowerCase().trim();
                     
-                    console.log('Applying discount:', appliedDiscount);
-                    console.log('Discount category:', category);
-                    console.log('Discount percent:', discountPercent);
-                    
                     if (category === 'all') {
                         discount = subtotal * discountPercent;
-                        console.log('Applied to all items. Discount:', discount);
                     } else {
-                        // Check each cart item's category (case-insensitive)
                         const categoryTotal = cart
                             .filter(item => {
                                 const itemCategory = (item.Category || '').toLowerCase().trim();
-                                const matches = itemCategory === category;
-                                console.log(`Item: ${item.Name}, Category: "${itemCategory}", Matches "${category}": ${matches}`);
-                                return matches;
+                                return itemCategory === category;
                             })
                             .reduce((sum, item) => sum + item.subtotal, 0);
                         
                         discount = categoryTotal * discountPercent;
-                        console.log(`Applied to category "${category}". Category total: ${categoryTotal}, Discount: ${discount}`);
                     }
                 }
             }
@@ -1371,10 +1330,6 @@
                 return;
             }
             
-            console.log('Trying to apply code:', code);
-            console.log('Available discount codes:', config.discountCodes);
-            
-            // Try both original case and uppercase
             let discountCode = code;
             let discountInfo = config.discountCodes ? config.discountCodes[code] : null;
             
@@ -1384,7 +1339,6 @@
             }
             
             if (!discountInfo) {
-                console.log('Code not found in config');
                 messageEl.style.color = '#d9534f';
                 messageEl.textContent = 'Invalid discount code';
                 appliedDiscount = null;
@@ -1392,18 +1346,14 @@
                 return;
             }
             
-            console.log('Found discount info:', discountInfo);
-            
             const category = discountInfo.category.toLowerCase().trim();
             
-            // Check if any items in cart match the discount category
             let hasMatchingItems = false;
             if (category === 'all') {
                 hasMatchingItems = cart.length > 0;
             } else {
                 hasMatchingItems = cart.some(item => {
                     const itemCategory = (item.Category || '').toLowerCase().trim();
-                    console.log(`Checking item "${item.Name}" - Category: "${itemCategory}" vs Required: "${category}"`);
                     return itemCategory === category;
                 });
             }
@@ -1432,7 +1382,6 @@
         });
 
         sendWhatsappBtn.addEventListener('click', async () => {
-            // Show loading state
             const statusDiv = document.getElementById('final-check-status');
             sendWhatsappBtn.disabled = true;
             sendWhatsappBtn.style.opacity = '0.6';
@@ -1440,19 +1389,14 @@
             statusDiv.textContent = 'Verifying outlet status...';
             
             try {
-                // Re-fetch config to ensure we have latest data
                 console.log('Re-checking outlet status before placing order...');
                 const freshConfig = await fetchConfig();
                 
-                // Check outlet status with fresh config
                 const tempConfig = config;
                 config = freshConfig;
                 const statusCheck = checkOutletStatus();
                 const locationCheck = await checkUserLocation();
-                config = tempConfig; // Restore original config
-                
-                console.log('Fresh status check:', statusCheck);
-                console.log('Fresh location check:', locationCheck);
+                config = tempConfig;
                 
                 if (!statusCheck.open) {
                     statusDiv.style.color = '#d9534f';
@@ -1478,7 +1422,6 @@
                     return;
                 }
                 
-                // All checks passed
                 statusDiv.style.color = '#25D366';
                 statusDiv.textContent = 'Verified! Opening WhatsApp...';
                 
@@ -1487,7 +1430,6 @@
                     window.open(`https://api.whatsapp.com/send?phone=7011847629&text=${message}`, '_blank');
                 }
                 
-                // Reset UI
                 setTimeout(() => {
                     sendWhatsappBtn.disabled = false;
                     sendWhatsappBtn.style.opacity = '1';
@@ -1514,7 +1456,6 @@
 
         getTableNumberFromURL();
         
-        // Auto-hide address bar on mobile browsers
         function hideAddressBar() {
             if (!window.location.hash) {
                 if (document.height < window.outerHeight) {
@@ -1531,7 +1472,6 @@
             setTimeout(hideAddressBar, 200);
         });
 
-        // Request fullscreen on user interaction (for Android)
         function requestFullScreen() {
             const elem = document.documentElement;
             if (elem.requestFullscreen) {
@@ -1545,7 +1485,6 @@
             }
         }
 
-        // Trigger fullscreen on first user interaction
         let hasInteracted = false;
         const triggerFullScreen = () => {
             if (!hasInteracted) {
