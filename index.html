@@ -687,6 +687,7 @@
                     <button id="send-whatsapp-btn">
                         <span>📱</span> Send Order on WhatsApp
                     </button>
+                    <div id="final-check-status" style="display: none; text-align: center; font-size: 0.9em; margin-top: 10px; color: #666;">Verifying outlet status...</div>
                 </div>
             </div>
         </div>
@@ -1347,14 +1348,78 @@
             cartModalOverlay.classList.add('visible');
         });
 
-        sendWhatsappBtn.addEventListener('click', () => {
-            if (!outletOpen) {
-                alert('Sorry, we are currently not accepting orders.');
-                return;
-            }
-            const message = generateWhatsAppMessage();
-            if (message) {
-                window.open(`https://api.whatsapp.com/send?phone=7011847629&text=${message}`, '_blank');
+        sendWhatsappBtn.addEventListener('click', async () => {
+            // Show loading state
+            const statusDiv = document.getElementById('final-check-status');
+            sendWhatsappBtn.disabled = true;
+            sendWhatsappBtn.style.opacity = '0.6';
+            statusDiv.style.display = 'block';
+            statusDiv.textContent = 'Verifying outlet status...';
+            
+            try {
+                // Re-fetch config to ensure we have latest data
+                console.log('Re-checking outlet status before placing order...');
+                const freshConfig = await fetchConfig();
+                
+                // Check outlet status with fresh config
+                const tempConfig = config;
+                config = freshConfig;
+                const statusCheck = checkOutletStatus();
+                const locationCheck = await checkUserLocation();
+                config = tempConfig; // Restore original config
+                
+                console.log('Fresh status check:', statusCheck);
+                console.log('Fresh location check:', locationCheck);
+                
+                if (!statusCheck.open) {
+                    statusDiv.style.color = '#d9534f';
+                    statusDiv.textContent = statusCheck.reason;
+                    sendWhatsappBtn.disabled = false;
+                    sendWhatsappBtn.style.opacity = '1';
+                    setTimeout(() => {
+                        alert(`Sorry, outlet is now closed:\n${statusCheck.reason}`);
+                        statusDiv.style.display = 'none';
+                    }, 500);
+                    return;
+                }
+                
+                if (!locationCheck.allowed) {
+                    statusDiv.style.color = '#d9534f';
+                    statusDiv.textContent = locationCheck.reason;
+                    sendWhatsappBtn.disabled = false;
+                    sendWhatsappBtn.style.opacity = '1';
+                    setTimeout(() => {
+                        alert(`Sorry, you are outside delivery range:\n${locationCheck.reason}`);
+                        statusDiv.style.display = 'none';
+                    }, 500);
+                    return;
+                }
+                
+                // All checks passed
+                statusDiv.style.color = '#25D366';
+                statusDiv.textContent = 'Verified! Opening WhatsApp...';
+                
+                const message = generateWhatsAppMessage();
+                if (message) {
+                    window.open(`https://api.whatsapp.com/send?phone=7011847629&text=${message}`, '_blank');
+                }
+                
+                // Reset UI
+                setTimeout(() => {
+                    sendWhatsappBtn.disabled = false;
+                    sendWhatsappBtn.style.opacity = '1';
+                    statusDiv.style.display = 'none';
+                }, 2000);
+                
+            } catch (error) {
+                console.error('Error during final verification:', error);
+                statusDiv.style.color = '#d9534f';
+                statusDiv.textContent = 'Verification failed. Please try again.';
+                sendWhatsappBtn.disabled = false;
+                sendWhatsappBtn.style.opacity = '1';
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 3000);
             }
         });
 
