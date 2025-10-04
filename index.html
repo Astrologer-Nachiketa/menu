@@ -822,39 +822,67 @@
         }
 
         function checkOutletStatus() {
-            if (!config['on time'] || !config['off time']) return true;
+            if (!config['on time'] || !config['off time']) {
+                console.log('No time configuration found, outlet open by default');
+                return { open: true };
+            }
             
             const now = new Date();
             const currentTime = now.getHours() * 60 + now.getMinutes();
             const currentDay = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'][now.getDay()];
             const currentDate = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
+            const currentDateSlash = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
             
-            // Check time
-            const [onHour, onMin] = config['on time'].split(':').map(Number);
-            const [offHour, offMin] = config['off time'].split(':').map(Number);
+            console.log('Current time (minutes):', currentTime);
+            console.log('Current day:', currentDay);
+            console.log('Current date:', currentDate, 'or', currentDateSlash);
+            console.log('Config on time:', config['on time']);
+            console.log('Config off time:', config['off time']);
+            console.log('Config off days:', config['off days']);
+            console.log('Config holidays:', config['holidays']);
+            
+            // Parse opening time
+            const onTimeParts = config['on time'].split(':');
+            const onHour = parseInt(onTimeParts[0]);
+            const onMin = onTimeParts[1] ? parseInt(onTimeParts[1]) : 0;
             const onTime = onHour * 60 + onMin;
+            
+            // Parse closing time
+            const offTimeParts = config['off time'].split(':');
+            const offHour = parseInt(offTimeParts[0]);
+            const offMin = offTimeParts[1] ? parseInt(offTimeParts[1]) : 0;
             const offTime = offHour * 60 + offMin;
             
+            console.log('Parsed on time (minutes):', onTime);
+            console.log('Parsed off time (minutes):', offTime);
+            
+            // Check time
             if (currentTime < onTime || currentTime > offTime) {
-                return { open: false, reason: `We're open from ${config['on time']} to ${config['off time']}` };
+                return { 
+                    open: false, 
+                    reason: `We're open from ${config['on time']} to ${config['off time']}. Current time: ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}` 
+                };
             }
             
             // Check off days
             if (config['off days']) {
                 const offDays = config['off days'].toLowerCase().split(',').map(d => d.trim());
+                console.log('Off days array:', offDays);
                 if (offDays.includes(currentDay)) {
-                    return { open: false, reason: "We're closed today" };
+                    return { open: false, reason: `We're closed on ${currentDay.charAt(0).toUpperCase() + currentDay.slice(1)}days` };
                 }
             }
             
-            // Check holidays
+            // Check holidays (support both dash and slash formats)
             if (config['holidays']) {
                 const holidays = config['holidays'].split(',').map(d => d.trim());
-                if (holidays.includes(currentDate)) {
-                    return { open: false, reason: "We're closed for the holiday" };
+                console.log('Holidays array:', holidays);
+                if (holidays.includes(currentDate) || holidays.includes(currentDateSlash)) {
+                    return { open: false, reason: "We're closed for the holiday today" };
                 }
             }
             
+            console.log('All checks passed, outlet is open');
             return { open: true };
         }
 
