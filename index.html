@@ -1562,12 +1562,57 @@
             const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
             
             let confirmHtml = `
-                <div style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 1.1em;">
-                    <span style="color: #666;">Total Items:</span>
-                    <span style="font-weight: 700; color: #333;">${totalItems}</span>
-                </div>
-                <div style="border-top: 1px solid #ddd; padding-top: 12px; margin-top: 12px;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                <div style="margin-bottom: 20px;">
+                    <h4 style="font-size: 1.1em; color: #333; margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 8px;">Order Items</h4>
+            `;
+            
+            cart.forEach((item, index) => {
+                confirmHtml += `
+                    <div style="margin-bottom: 15px; padding: 12px; background: white; border-radius: 8px; border: 1px solid #eee;">
+                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 5px;">
+                            <div style="flex: 1;">
+                                <div style="font-weight: 700; color: #333; font-size: 0.95em; margin-bottom: 4px;">
+                                    ${item.quantity}x ${item.Name}
+                                </div>
+                `;
+                
+                if (item.selectedAddons && item.selectedAddons.length > 0) {
+                    confirmHtml += `<div style="font-size: 0.85em; color: #666; margin-left: 10px; margin-top: 5px;">`;
+                    item.selectedAddons.forEach(addon => {
+                        confirmHtml += `<div style="margin-bottom: 2px;">+ ${addon.name}</div>`;
+                    });
+                    confirmHtml += `</div>`;
+                }
+                
+                if (item.instructions && item.instructions.trim()) {
+                    confirmHtml += `<div style="font-size: 0.85em; color: #d9534f; font-style: italic; margin-left: 10px; margin-top: 5px;">"${item.instructions.trim()}"</div>`;
+                }
+                
+                confirmHtml += `
+                            </div>
+                            <div style="font-weight: 700; color: #25D366; white-space: nowrap; margin-left: 10px;">
+                                ₹${item.subtotal.toFixed(2)}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            const generalInstructions = document.getElementById('general-instructions').value.trim();
+            if (generalInstructions) {
+                confirmHtml += `
+                    <div style="margin-top: 15px; padding: 12px; background: #fff8e1; border-radius: 8px; border-left: 4px solid #ffd93d;">
+                        <div style="font-weight: 600; color: #333; font-size: 0.9em; margin-bottom: 5px;">General Instructions:</div>
+                        <div style="font-size: 0.85em; color: #666; font-style: italic;">"${generalInstructions}"</div>
+                    </div>
+                `;
+            }
+            
+            confirmHtml += `</div>`;
+            
+            confirmHtml += `
+                <div style="background: #f0f9ff; padding: 15px; border-radius: 8px; border: 1px solid #d1e7ff;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.95em;">
                         <span style="color: #666;">Subtotal:</span>
                         <span style="font-weight: 600;">₹${subtotal.toFixed(2)}</span>
                     </div>
@@ -1575,19 +1620,19 @@
             
             if (discount > 0) {
                 confirmHtml += `
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px; color: #25D366;">
-                        <span>Discount:</span>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px; color: #25D366; font-size: 0.95em;">
+                        <span>Discount (${appliedDiscount}):</span>
                         <span style="font-weight: 600;">-₹${discount.toFixed(2)}</span>
                     </div>
                 `;
             }
             
             confirmHtml += `
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.95em;">
                         <span style="color: #666;">GST (5%):</span>
                         <span style="font-weight: 600;">₹${gst.toFixed(2)}</span>
                     </div>
-                    <div style="border-top: 2px solid #25D366; padding-top: 12px; margin-top: 12px; display: flex; justify-content: space-between; font-size: 1.3em;">
+                    <div style="border-top: 2px solid #25D366; padding-top: 10px; margin-top: 10px; display: flex; justify-content: space-between; font-size: 1.2em;">
                         <span style="font-weight: 700; color: #333;">TOTAL:</span>
                         <span style="font-weight: 700; color: #25D366;">₹${grandTotal.toFixed(2)}</span>
                     </div>
