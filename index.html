@@ -646,6 +646,16 @@
             -webkit-user-select: none;
             user-select: none;
         }
+
+        #cancel-order-btn:active {
+            transform: scale(0.95);
+            background: #f5f5f5;
+        }
+
+        #confirm-send-btn:active {
+            transform: scale(0.95);
+            background: #20ba5a;
+        }
     </style>
 </head>
 <body>
@@ -695,6 +705,30 @@
                 </div>
             </div>
         </div>
+
+        <div class="modal-overlay" id="confirmation-modal-overlay" style="z-index: 300;">
+            <div class="modal">
+                <div class="modal-header" style="background: #25D366; color: white;">
+                    <h3>Confirm Your Order</h3>
+                    <span class="close-btn" id="close-confirmation-modal" style="color: white;">&times;</span>
+                </div>
+                <div class="modal-body" style="padding: 25px 20px;">
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <div style="font-size: 3em; margin-bottom: 10px;">📋</div>
+                        <h4 style="font-size: 1.3em; color: #333; margin-bottom: 20px;">Order Summary</h4>
+                    </div>
+                    <div id="confirmation-details" style="background: #f9f9f9; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                    </div>
+                    <div style="text-align: center; color: #666; font-size: 0.9em; margin-bottom: 20px;">
+                        Review your order before sending to WhatsApp
+                    </div>
+                </div>
+                <div class="modal-footer" style="padding: 15px 20px; display: flex; gap: 10px; justify-content: center;">
+                    <button id="cancel-order-btn" style="background: white; color: #666; border: 2px solid #ddd; padding: 12px 24px; border-radius: 25px; font-weight: 700; cursor: pointer; font-size: 1em; min-height: 48px; flex: 1; max-width: 150px;">Cancel</button>
+                    <button id="confirm-send-btn" style="background: #25D366; color: white; border: none; padding: 12px 24px; border-radius: 25px; font-weight: 700; cursor: pointer; font-size: 1em; min-height: 48px; flex: 1; max-width: 150px; box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);">Send Order</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -734,6 +768,11 @@
         const closeCartModalBtn = document.getElementById('close-cart-modal');
         const sendWhatsappBtn = document.getElementById('send-whatsapp-btn');
         const viewOrderBtn = document.getElementById('view-order-btn');
+
+        const confirmationModalOverlay = document.getElementById('confirmation-modal-overlay');
+        const closeConfirmationModalBtn = document.getElementById('close-confirmation-modal');
+        const cancelOrderBtn = document.getElementById('cancel-order-btn');
+        const confirmSendBtn = document.getElementById('confirm-send-btn');
 
         async function fetchDiscountCodes() {
             try {
@@ -1420,7 +1459,13 @@
         sendWhatsappBtn.addEventListener('click', async () => {
             // Block if outlet is closed
             if (!outletOpen) {
-                alert('Sorry, the outlet is currently closed. You cannot place orders at this time.');
+                const statusDiv = document.getElementById('final-check-status');
+                statusDiv.style.display = 'block';
+                statusDiv.style.color = '#d9534f';
+                statusDiv.textContent = 'Outlet is currently closed. Cannot place orders.';
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 3000);
                 return;
             }
             
@@ -1446,9 +1491,8 @@
                     sendWhatsappBtn.disabled = false;
                     sendWhatsappBtn.style.opacity = '1';
                     setTimeout(() => {
-                        alert(`Sorry, outlet is now closed:\n${statusCheck.reason}`);
                         statusDiv.style.display = 'none';
-                    }, 500);
+                    }, 4000);
                     return;
                 }
                 
@@ -1459,9 +1503,8 @@
                     sendWhatsappBtn.disabled = false;
                     sendWhatsappBtn.style.opacity = '1';
                     setTimeout(() => {
-                        alert(`Sorry, you are outside delivery range:\n${locationCheck.reason}`);
                         statusDiv.style.display = 'none';
-                    }, 500);
+                    }, 4000);
                     return;
                 }
                 
@@ -1473,59 +1516,34 @@
                     if (!freshDiscountInfoArray || !Array.isArray(freshDiscountInfoArray)) {
                         config = tempConfig;
                         statusDiv.style.color = '#d9534f';
-                        statusDiv.textContent = 'Discount code is no longer valid';
+                        statusDiv.textContent = 'Discount code is no longer valid. Please remove and try again.';
                         sendWhatsappBtn.disabled = false;
                         sendWhatsappBtn.style.opacity = '1';
                         setTimeout(() => {
-                            alert('Your discount code is no longer valid. Please remove it and try again.');
                             statusDiv.style.display = 'none';
-                        }, 500);
+                        }, 4000);
                         return;
                     }
                     
                     // Update config with fresh discount data
                     config = freshConfig;
                     
-                    // Recalculate totals with fresh discount
-                    const { subtotal, discount, gst, grandTotal } = calculateTotals();
-                    
                     console.log('Fresh discount validation passed');
-                    console.log('Recalculated total:', grandTotal);
                 } else {
                     config = freshConfig;
                 }
                 
-                // All checks passed - show final confirmation
+                // All checks passed - show confirmation modal
                 statusDiv.style.color = '#25D366';
-                statusDiv.textContent = 'Verified! Preparing order...';
+                statusDiv.textContent = 'Verified! Preparing confirmation...';
                 
                 setTimeout(() => {
-                    const { subtotal, discount, gst, grandTotal } = calculateTotals();
-                    const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-                    
-                    let confirmMessage = `📋 ORDER CONFIRMATION\n\n`;
-                    confirmMessage += `Items: ${totalItems}\n`;
-                    confirmMessage += `Subtotal: ₹${subtotal.toFixed(2)}\n`;
-                    if (discount > 0) {
-                        confirmMessage += `Discount: -₹${discount.toFixed(2)}\n`;
-                    }
-                    confirmMessage += `GST (5%): ₹${gst.toFixed(2)}\n`;
-                    confirmMessage += `━━━━━━━━━━━━━━━━\n`;
-                    confirmMessage += `TOTAL: ₹${grandTotal.toFixed(2)}\n\n`;
-                    confirmMessage += `Confirm and send this order to WhatsApp?`;
-                    
-                    if (confirm(confirmMessage)) {
-                        const message = generateWhatsAppMessage();
-                        if (message) {
-                            window.open(`https://api.whatsapp.com/send?phone=7011847629&text=${message}`, '_blank');
-                        }
-                    }
-                    
                     sendWhatsappBtn.disabled = false;
                     sendWhatsappBtn.style.opacity = '1';
                     statusDiv.style.display = 'none';
+                    showConfirmationModal();
                     config = tempConfig;
-                }, 800);
+                }, 500);
                 
             } catch (error) {
                 console.error('Error during final verification:', error);
@@ -1536,6 +1554,69 @@
                 setTimeout(() => {
                     statusDiv.style.display = 'none';
                 }, 3000);
+            }
+        });
+
+        function showConfirmationModal() {
+            const { subtotal, discount, gst, grandTotal } = calculateTotals();
+            const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+            
+            let confirmHtml = `
+                <div style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 1.1em;">
+                    <span style="color: #666;">Total Items:</span>
+                    <span style="font-weight: 700; color: #333;">${totalItems}</span>
+                </div>
+                <div style="border-top: 1px solid #ddd; padding-top: 12px; margin-top: 12px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span style="color: #666;">Subtotal:</span>
+                        <span style="font-weight: 600;">₹${subtotal.toFixed(2)}</span>
+                    </div>
+            `;
+            
+            if (discount > 0) {
+                confirmHtml += `
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px; color: #25D366;">
+                        <span>Discount:</span>
+                        <span style="font-weight: 600;">-₹${discount.toFixed(2)}</span>
+                    </div>
+                `;
+            }
+            
+            confirmHtml += `
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span style="color: #666;">GST (5%):</span>
+                        <span style="font-weight: 600;">₹${gst.toFixed(2)}</span>
+                    </div>
+                    <div style="border-top: 2px solid #25D366; padding-top: 12px; margin-top: 12px; display: flex; justify-content: space-between; font-size: 1.3em;">
+                        <span style="font-weight: 700; color: #333;">TOTAL:</span>
+                        <span style="font-weight: 700; color: #25D366;">₹${grandTotal.toFixed(2)}</span>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('confirmation-details').innerHTML = confirmHtml;
+            confirmationModalOverlay.classList.add('visible');
+        }
+
+        closeConfirmationModalBtn.addEventListener('click', () => {
+            confirmationModalOverlay.classList.remove('visible');
+        });
+
+        cancelOrderBtn.addEventListener('click', () => {
+            confirmationModalOverlay.classList.remove('visible');
+        });
+
+        confirmSendBtn.addEventListener('click', () => {
+            const message = generateWhatsAppMessage();
+            if (message) {
+                window.open(`https://api.whatsapp.com/send?phone=7011847629&text=${message}`, '_blank');
+            }
+            confirmationModalOverlay.classList.remove('visible');
+        });
+
+        confirmationModalOverlay.addEventListener('click', (e) => { 
+            if (e.target === confirmationModalOverlay) {
+                confirmationModalOverlay.classList.remove('visible');
             }
         });
 
