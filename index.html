@@ -734,7 +734,8 @@
     <script>
     document.addEventListener('DOMContentLoaded', () => {
 
-        const GST_RATE = 0.05;
+        let GST_RATE = 0.05; // Default 5% GST, will be updated from config
+        let WHATSAPP_NUMBER = '917011847629'; // Default, will be updated from config
 
         const MENU_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTlM6BGIWdct_szKaONKItArAjOzdEgw-780Qha42rhQNY4_xZ15x8VxzRzzEhlUz8CDGsSY4wbjrip/pub?gid=0&single=true&output=csv';
         const ADDONS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTlM6BGIWdct_szKaONKItArAjOzdEgw-780Qha42rhQNY4_xZ15x8VxzRzzEhlUz8CDGsSY4wbjrip/pub?gid=68309898&single=true&output=csv';
@@ -840,6 +841,9 @@
                         
                         if (header === 'Price' || header === 'Addon_Item_Price') {
                             item[header] = parseInt(value, 10) || 0; 
+                        } else if (header === 'status' || header === 'Status') {
+                            // Handle checkbox values from Google Sheets
+                            item[header] = value === 'TRUE' || value === 'true' || value === true;
                         } else {
                             item[header] = value;
                         }
@@ -1101,8 +1105,21 @@
         }
 
         function renderCategories() {
-            const categories = [...new Set(menuItems.map(item => item.Category))];
+            const categories = [...new Set(menuItems
+                .filter(item => {
+                    // Only show items where status is true (checked)
+                    const status = item.status || item.Status;
+                    return status === 'TRUE' || status === 'true' || status === true;
+                })
+                .map(item => item.Category))];
+            
             categoryListUl.innerHTML = '';
+            
+            if (categories.length === 0) {
+                itemListMain.innerHTML = '<p style="padding: 20px; text-align: center; color: #666;">No items available at the moment.</p>';
+                return;
+            }
+            
             categories.forEach(category => {
                 const li = document.createElement('li');
                 li.textContent = category;
@@ -1122,7 +1139,17 @@
 
         function renderItems(category) {
             itemListMain.innerHTML = '';
-            const itemsInCategory = menuItems.filter(item => item.Category === category);
+            const itemsInCategory = menuItems.filter(item => {
+                // Check if item is in this category and status is true
+                const status = item.status || item.Status;
+                const isAvailable = status === 'TRUE' || status === 'true' || status === true;
+                return item.Category === category && isAvailable;
+            });
+            
+            if (itemsInCategory.length === 0) {
+                itemListMain.innerHTML = '<p style="padding: 20px; text-align: center; color: #666;">No items available in this category.</p>';
+                return;
+            }
             
             itemsInCategory.forEach(item => {
                 const itemInCart = cart.find(cartItem => cartItem.Name === item.Name && !cartItem.selectedAddons.length && !cartItem.instructions);
@@ -1654,7 +1681,7 @@
         confirmSendBtn.addEventListener('click', () => {
             const message = generateWhatsAppMessage();
             if (message) {
-                window.open(`https://api.whatsapp.com/send?phone=7011847629&text=${message}`, '_blank');
+                window.open(`https://api.whatsapp.com/send?phone=${WHATSAPP_NUMBER}&text=${message}`, '_blank');
             }
             confirmationModalOverlay.classList.remove('visible');
         });
