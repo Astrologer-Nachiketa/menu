@@ -895,6 +895,19 @@
                     configObj.deliveryRadius = parseFloat(configObj['gps coordinate'].replace(/[^\d.]/g, ''));
                 }
                 
+                // Update GST rate from config
+                if (configObj['gst'] || configObj['GST']) {
+                    const gstValue = configObj['gst'] || configObj['GST'];
+                    GST_RATE = parseFloat(gstValue.replace('%', '')) / 100;
+                    console.log('GST rate updated from config:', GST_RATE);
+                }
+                
+                // Update WhatsApp number from config
+                if (configObj['whatsapp number'] || configObj['WhatsApp Number']) {
+                    WHATSAPP_NUMBER = (configObj['whatsapp number'] || configObj['WhatsApp Number']).replace(/[^\d]/g, '');
+                    console.log('WhatsApp number updated from config:', WHATSAPP_NUMBER);
+                }
+                
                 console.log('Full config loaded:', configObj);
                 return configObj;
             } catch (error) {
@@ -902,7 +915,6 @@
                 return {};
             }
         }
-
         function checkOutletStatus() {
             if (!config['on time'] || !config['off time']) {
                 console.log('No time configuration found, outlet open by default');
