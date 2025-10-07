@@ -1338,10 +1338,11 @@
             });
 
             const { subtotal, discount, gst, grandTotal } = calculateTotals();
+            const gstPercentage = (GST_RATE * 100).toFixed(0); 
             cartTotalsSummary.innerHTML = `
                 <div class="totals-row"><span>Subtotal</span><span>₹${subtotal.toFixed(2)}</span></div>
                 ${discount > 0 ? `<div class="totals-row" style="color: #25D366;"><span>Discount (${appliedDiscount})</span><span>-₹${discount.toFixed(2)}</span></div>` : ''}
-                <div class="totals-row"><span>GST (5%)</span><span>₹${gst.toFixed(2)}</span></div>
+                <div class="totals-row"><span>GST (${gstPercentage}%)</span><span>₹${gst.toFixed(2)}</span></div>
                 <div class="totals-row grand-total"><span>Grand Total</span><span>₹${grandTotal.toFixed(2)}</span></div>
             `;
             cartModalBody.querySelectorAll('.cart-edit-btn').forEach(btn => {
