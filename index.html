@@ -1056,15 +1056,35 @@
         }
 
         async function loadMenuData() {
-            console.log("Loading configuration...");
-            config = await fetchConfig();
-            console.log("Config loaded:", config);
-            
-            const statusCheck = checkOutletStatus();
-            console.log("Status check result:", statusCheck);
-            
-            const locationCheck = await checkUserLocation();
-            console.log("Location check result:", locationCheck);
+            console.log("Loading configuration...");
+            config = await fetchConfig();
+            console.log("Config loaded:", config);
+            
+            // Update global variables from the fetched config
+            if (config['GST_RATE']) {
+                const parsedGst = parseFloat(config['GST_RATE']);
+                if (!isNaN(parsedGst)) { // Ensure it's a valid number
+                    GST_RATE = parsedGst;
+                    console.log(`GST Rate updated from config: ${GST_RATE}`);
+                }
+            }
+            if (config['WHATSAPP_NUMBER']) {
+                WHATSAPP_NUMBER = config['WHATSAPP_NUMBER'];
+                console.log(`WhatsApp Number updated from config: ${WHATSAPP_NUMBER}`);
+            }
+            if (config['BRAND_NAME']) {
+                BRAND_NAME = config['BRAND_NAME'];
+                // Optionally, update the UI with the new brand name
+                document.title = BRAND_NAME; 
+                document.getElementById('brand-name').textContent = BRAND_NAME;
+                console.log(`Brand Name updated from config: ${BRAND_NAME}`);
+            }
+            
+            const statusCheck = checkOutletStatus();
+            console.log("Status check result:", statusCheck);
+            
+            const locationCheck = await checkUserLocation();
+            console.log("Location check result:", locationCheck);
             
             // Load menu data regardless of status
             console.log("Loading menu items...");
