@@ -735,7 +735,8 @@
     document.addEventListener('DOMContentLoaded', () => {
 
         let GST_RATE = 0.05; // Default 5% GST, will be updated from config
-        let WHATSAPP_NUMBER = '917011847629'; // Default, will be updated from config
+        let WHATSAPP_NUMBER = '917011847621'; // Default, will be updated from config
+        let BRAND_NAME = 'Our Menu'; // Default, will be updated from config
 
         const MENU_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTlM6BGIWdct_szKaONKItArAjOzdEgw-780Qha42rhQNY4_xZ15x8VxzRzzEhlUz8CDGsSY4wbjrip/pub?gid=0&single=true&output=csv';
         const ADDONS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTlM6BGIWdct_szKaONKItArAjOzdEgw-780Qha42rhQNY4_xZ15x8VxzRzzEhlUz8CDGsSY4wbjrip/pub?gid=68309898&single=true&output=csv';
@@ -895,19 +896,6 @@
                     configObj.deliveryRadius = parseFloat(configObj['gps coordinate'].replace(/[^\d.]/g, ''));
                 }
                 
-                // Update GST rate from config
-                if (configObj['gst'] || configObj['GST']) {
-                    const gstValue = configObj['gst'] || configObj['GST'];
-                    GST_RATE = parseFloat(gstValue.replace('%', '')) / 100;
-                    console.log('GST rate updated from config:', GST_RATE);
-                }
-                
-                // Update WhatsApp number from config
-                if (configObj['whatsapp number'] || configObj['WhatsApp Number']) {
-                    WHATSAPP_NUMBER = (configObj['whatsapp number'] || configObj['WhatsApp Number']).replace(/[^\d]/g, '');
-                    console.log('WhatsApp number updated from config:', WHATSAPP_NUMBER);
-                }
-                
                 console.log('Full config loaded:', configObj);
                 return configObj;
             } catch (error) {
@@ -915,6 +903,7 @@
                 return {};
             }
         }
+
         function checkOutletStatus() {
             if (!config['on time'] || !config['off time']) {
                 console.log('No time configuration found, outlet open by default');
