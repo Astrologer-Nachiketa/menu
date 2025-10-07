@@ -663,7 +663,7 @@
     <div class="phone-wrapper">
         <div class="app-container">
             <header class="header">
-                <h1>Our Menu <span id="table-number-display"></span></h1>
+                <h1><span id="brand-name">Our Menu</span> <span id="table-number-display"></span></h1>
             </header>
             <div class="menu-container">
                 <aside class="category-list"><ul id="category-list-ul"></ul></aside>
@@ -1416,7 +1416,7 @@
             if (discount > 0) {
                 message += `*Discount (${appliedDiscount}):* -₹${discount.toFixed(2)}\n`;
             }
-            message += `*GST (5%):* ₹${gst.toFixed(2)}\n`;
+            message += `*GST (${(GST_RATE * 100).toFixed(0)}%):* ₹${gst.toFixed(2)}\n`;
             message += `*Grand Total: ₹${grandTotal.toFixed(2)}*\n`;
             message += `-----------------------------------\n`;
 
@@ -1677,7 +1677,7 @@
             
             confirmHtml += `
                     <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.95em;">
-                        <span style="color: #666;">GST (5%):</span>
+                        <span style="color: #666;">GST (${(GST_RATE * 100).toFixed(0)}%):</span>
                         <span style="font-weight: 600;">₹${gst.toFixed(2)}</span>
                     </div>
                     <div style="border-top: 2px solid #25D366; padding-top: 10px; margin-top: 10px; display: flex; justify-content: space-between; font-size: 1.2em;">
