@@ -1056,35 +1056,48 @@
         }
 
         async function loadMenuData() {
-            console.log("Loading configuration...");
-            config = await fetchConfig();
-            console.log("Config loaded:", config);
-            
-            // Update global variables from the fetched config
-            if (config['GST_RATE']) {
-                const parsedGst = parseFloat(config['GST_RATE']);
+            console.log("Loading configuration...");
+            config = await fetchConfig();
+            console.log("Config loaded:", config);
+            
+            // --- START: CORRECTED CODE ---
+
+            // Use the lowercase 'gst' key and handle the '%' format
+            if (config['gst']) {
+                // Takes "10%", removes "%", converts "10" to a number, and divides by 100
+                const parsedGst = parseFloat(config['gst'].replace('%', '')) / 100;
+                
                 if (!isNaN(parsedGst)) { // Ensure it's a valid number
-                    GST_RATE = parsedGst;
+                    GST_RATE = parsedGst; // Will be set to 0.10
                     console.log(`GST Rate updated from config: ${GST_RATE}`);
                 }
             }
-            if (config['WHATSAPP_NUMBER']) {
-                WHATSAPP_NUMBER = config['WHATSAPP_NUMBER'];
+            
+            // Use the lowercase 'whatsapp' key
+            if (config['whatsapp']) {
+                WHATSAPP_NUMBER = config['whatsapp'];
                 console.log(`WhatsApp Number updated from config: ${WHATSAPP_NUMBER}`);
             }
-            if (config['BRAND_NAME']) {
-                BRAND_NAME = config['BRAND_NAME'];
-                // Optionally, update the UI with the new brand name
+
+            // Use the lowercase 'brand' key
+            if (config['brand']) {
+                BRAND_NAME = config['brand'];
                 document.title = BRAND_NAME; 
-                document.getElementById('brand-name').textContent = BRAND_NAME;
+                // Make sure your H1 tag has the id="brand-name"
+                const brandNameElement = document.getElementById('brand-name');
+                if(brandNameElement) {
+                   brandNameElement.textContent = BRAND_NAME;
+                }
                 console.log(`Brand Name updated from config: ${BRAND_NAME}`);
             }
-            
-            const statusCheck = checkOutletStatus();
-            console.log("Status check result:", statusCheck);
-            
-            const locationCheck = await checkUserLocation();
-            console.log("Location check result:", locationCheck);
+
+            // --- END: CORRECTED CODE ---
+            
+            const statusCheck = checkOutletStatus();
+            console.log("Status check result:", statusCheck);
+            
+            const locationCheck = await checkUserLocation();
+            console.log("Location check result:", locationCheck);
             
             // Load menu data regardless of status
             console.log("Loading menu items...");
@@ -1098,13 +1111,20 @@
             // Show overlay if closed but allow browsing
             if (!statusCheck.open) {
                 showClosedOverlay(statusCheck.reason);
-                return;
+                // No return here, allow browsing
             }
             
             if (!locationCheck.allowed) {
                 showClosedOverlay(locationCheck.reason);
+                // No return here, allow browsing
+            }
+            
+            // This part should be outside the checks to always render the menu
+            if (menuItems.length === 0) {
+                itemListMain.innerHTML = '<p style="padding: 20px; text-align: center; color: #d9534f;">Error loading menu data. Please refresh the page.</p>';
                 return;
             }
+            renderCategories();
         }
 
         function getTableNumberFromURL() {
