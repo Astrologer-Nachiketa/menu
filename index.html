@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -749,6 +748,23 @@
                 </div>
             </div>
         </div>
+
+        <!-- FIX 1: ADDED CONFIRMATION MODAL HTML -->
+        <div class="modal-overlay" id="confirmation-modal-overlay">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3>Confirm Your Order</h3>
+                    <span class="close-btn" id="close-confirmation-modal-btn">&times;</span>
+                </div>
+                <div class="modal-body" id="confirmation-details" style="background: #f7f7f7;">
+                    <!-- Order summary will be injected here by JavaScript -->
+                </div>
+                <div class="modal-footer" style="justify-content: space-between;">
+                    <button id="cancel-order-btn" style="background: #777; color: white; border: none; padding: 12px 24px; border-radius: 25px; font-weight: 700; cursor: pointer;">Cancel</button>
+                    <button id="confirm-send-btn" style="background: #25D366; color: white; border: none; padding: 12px 24px; border-radius: 25px; font-weight: 700; cursor: pointer;">Confirm & Send</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -791,6 +807,12 @@
         const closeCartModalBtn = document.getElementById('close-cart-modal');
         const sendWhatsappBtn = document.getElementById('send-whatsapp-btn');
         const viewOrderBtn = document.getElementById('view-order-btn');
+
+        // FIX 2: ADDED JS VARIABLES FOR CONFIRMATION MODAL
+        const confirmationModalOverlay = document.getElementById('confirmation-modal-overlay');
+        const closeConfirmationModalBtn = document.getElementById('close-confirmation-modal-btn');
+        const cancelOrderBtn = document.getElementById('cancel-order-btn');
+        const confirmSendBtn = document.getElementById('confirm-send-btn');
 
         async function fetchAndParseCSV(url) {
             try {
@@ -1688,10 +1710,17 @@
             confirmationModalOverlay.classList.remove('visible');
         });
 
+        // FIX 3: CORRECTED WHATSAPP SEND LOGIC
         confirmSendBtn.addEventListener('click', () => {
             const message = generateWhatsAppMessage();
             if (message) {
-                window.open(`https://api.whatsapp.com/send?phone=${WHATSAPP_NUMBER}&text=${message}`, '_blank');
+                const WHATSAPP_NUMBER = config['Whatsapp Number'];
+                if (WHATSAPP_NUMBER) {
+                    window.open(`https://api.whatsapp.com/send?phone=${WHATSAPP_NUMBER.trim()}&text=${message}`, '_blank');
+                } else {
+                    console.error('Configuration error: WhatsApp number not found in config object.');
+                    alert('Could not send order. The WhatsApp number is not configured.');
+                }
             }
             confirmationModalOverlay.classList.remove('visible');
         });
@@ -1706,6 +1735,20 @@
             if (e.target && e.target.id === 'apply-discount-btn') {
                 applyDiscountCode();
             }
+        });
+        
+        // ADDED SEARCH EVENT LISTENERS
+        searchInput.addEventListener('input', () => {
+            searchQuery = searchInput.value;
+            clearSearchBtn.classList.toggle('visible', searchQuery.length > 0);
+            renderCategories();
+        });
+
+        clearSearchBtn.addEventListener('click', () => {
+            searchInput.value = '';
+            searchQuery = '';
+            clearSearchBtn.classList.remove('visible');
+            renderCategories();
         });
 
         getTableNumberFromURL();
@@ -1785,3 +1828,4 @@
     </script>
 </body>
 </html>
+
