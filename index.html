@@ -770,12 +770,14 @@
     <script>
     document.addEventListener('DOMContentLoaded', () => {
 
-        const GST_RATE = 0.05; // 5% GST
+        let GST_RATE = 0.05; // Default 5% GST, will be updated from config
+        let WHATSAPP_NUMBER = '917011847621'; // Default, will be updated from config
+        let BRAND_NAME = 'Our Menu'; // Default, will be updated from config
 
-        // URLs for your data
         const MENU_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTlM6BGIWdct_szKaONKItArAjOzdEgw-780Qha42rhQNY4_xZ15x8VxzRzzEhlUz8CDGsSY4wbjrip/pub?gid=0&single=true&output=csv';
         const ADDONS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTlM6BGIWdct_szKaONKItArAjOzdEgw-780Qha42rhQNY4_xZ15x8VxzRzzEhlUz8CDGsSY4wbjrip/pub?gid=68309898&single=true&output=csv';
         const CONFIG_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTlM6BGIWdct_szKaONKItArAjOzdEgw-780Qha42rhQNY4_xZ15x8VxzRzzEhlUz8CDGsSY4wbjrip/pub?gid=864388739&single=true&output=csv';
+        const DISCOUNT_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTlM6BGIWdct_szKaONKItArAjOzdEgw-780Qha42rhQNY4_xZ15x8VxzRzzEhlUz8CDGsSY4wbjrip/pub?gid=278622700&single=true&output=csv';
 
         let menuItems = [];
         let addons = [];
@@ -813,6 +815,52 @@
         const closeConfirmationModalBtn = document.getElementById('close-confirmation-modal-btn');
         const cancelOrderBtn = document.getElementById('cancel-order-btn');
         const confirmSendBtn = document.getElementById('confirm-send-btn');
+	
+	async function fetchDiscountCodes() {
+            try {
+                const response = await fetch(DISCOUNT_CSV_URL);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                
+                const csvText = await response.text();
+                console.log('Discount codes CSV loaded');
+                
+                const lines = csvText.trim().split('\n');
+                const headers = lines.shift().split(',').map(h => h.trim());
+                
+                console.log('Discount CSV headers:', headers);
+                
+                const discountCodes = {};
+                
+                lines.forEach((line, index) => {
+                    const values = line.split(',').map(v => v.trim());
+                    if (values.length >= 3) {
+                        const code = values[0];
+                        const discount = values[1];
+                        const category = values[2];
+                        
+                        if (code) {
+                            // Support multiple discounts per code
+                            if (!discountCodes[code]) {
+                                discountCodes[code] = [];
+                            }
+                            discountCodes[code].push({
+                                discount: discount,
+                                category: category
+                            });
+                            console.log(`Loaded discount code: ${code} = ${discount} for ${category}`);
+                        }
+                    }
+                });
+                
+                console.log('Total discount codes loaded:', Object.keys(discountCodes).length);
+                console.log('Discount codes object:', discountCodes);
+                
+                return discountCodes;
+            } catch (error) {
+                console.error("Error fetching discount codes:", error);
+                return {};
+            }
+        }
 
         async function fetchAndParseCSV(url) {
             try {
@@ -1057,9 +1105,12 @@
                 padding: 20px;
             `;
             overlay.innerHTML = `
-                <div style="font-size: 4em; margin-bottom: 20px;">🔒</div>
-                <h2 style="font-size: 1.8em; margin-bottom: 15px;">Outlet Closed</h2>
-                <p style="font-size: 1.2em; max-width: 400px;">${reason}</p>
+                <div style="background: rgba(0, 0, 0, 0.75); padding: 30px 20px; border-radius: 20px; pointer-events: auto; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5); max-width: 85%; border: 2px solid rgba(217, 83, 79, 0.6); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);">
+                    <div style="font-size: 3em; margin-bottom: 12px;">🔒</div>
+                    <h2 style="font-size: 1.5em; margin-bottom: 10px; font-weight: 700; color: #ff6b6b;">Outlet Closed</h2>
+                    <p style="font-size: 1em; max-width: 350px; line-height: 1.3; margin-bottom: 12px;">${reason}</p>
+                    <p style="font-size: 0.85em; opacity: 0.9; color: #ffd93d; font-weight: 500;">Browse menu • Cannot place orders</p>
+                </div>
             `;
             document.body.appendChild(overlay);
             outletOpen = false;
@@ -1070,30 +1121,46 @@
             config = await fetchConfig();
             console.log("Config loaded:", config);
             
-            // Check outlet status
+            // --- START: CORRECTED CODE ---
+
+            // Use the lowercase 'gst' key and handle the '%' format
+            if (config['gst']) {
+                // Takes "10%", removes "%", converts "10" to a number, and divides by 100
+                const parsedGst = parseFloat(config['gst'].replace('%', '')) / 100;
+                
+                if (!isNaN(parsedGst)) { // Ensure it's a valid number
+                    GST_RATE = parsedGst; // Will be set to 0.10
+                    console.log(`GST Rate updated from config: ${GST_RATE}`);
+                }
+            }
+            
+            // Use the lowercase 'whatsapp' key
+            if (config['whatsapp']) {
+                WHATSAPP_NUMBER = config['whatsapp'];
+                console.log(`WhatsApp Number updated from config: ${WHATSAPP_NUMBER}`);
+            }
+
+            // Use the lowercase 'brand' key
+            if (config['brand']) {
+                BRAND_NAME = config['brand'];
+                document.title = BRAND_NAME; 
+                // Make sure your H1 tag has the id="brand-name"
+                const brandNameElement = document.getElementById('brand-name');
+                if(brandNameElement) {
+                   brandNameElement.textContent = BRAND_NAME;
+                }
+                console.log(`Brand Name updated from config: ${BRAND_NAME}`);
+            }
+
+            // --- END: CORRECTED CODE ---
+            
             const statusCheck = checkOutletStatus();
             console.log("Status check result:", statusCheck);
             
-            if (!statusCheck.open) {
-                showClosedOverlay(statusCheck.reason);
-                // Still load menu but disable ordering
-                menuItems = await fetchAndParseCSV(MENU_CSV_URL);
-                addons = await fetchAndParseCSV(ADDONS_CSV_URL);
-                return;
-            }
-            
-            // Check user location
             const locationCheck = await checkUserLocation();
             console.log("Location check result:", locationCheck);
             
-            if (!locationCheck.allowed) {
-                showClosedOverlay(locationCheck.reason);
-                // Still load menu but disable ordering
-                menuItems = await fetchAndParseCSV(MENU_CSV_URL);
-                addons = await fetchAndParseCSV(ADDONS_CSV_URL);
-                return;
-            }
-            
+            // Load menu data regardless of status
             console.log("Loading menu items...");
             menuItems = await fetchAndParseCSV(MENU_CSV_URL);
             
@@ -1101,8 +1168,24 @@
             addons = await fetchAndParseCSV(ADDONS_CSV_URL);
 
             console.log("Data loaded successfully!");
-            console.log("Menu Items:", menuItems);
-            console.log("Addons:", addons);
+            
+            // Show overlay if closed but allow browsing
+            if (!statusCheck.open) {
+                showClosedOverlay(statusCheck.reason);
+                // No return here, allow browsing
+            }
+            
+            if (!locationCheck.allowed) {
+                showClosedOverlay(locationCheck.reason);
+                // No return here, allow browsing
+            }
+            
+            // This part should be outside the checks to always render the menu
+            if (menuItems.length === 0) {
+                itemListMain.innerHTML = '<p style="padding: 20px; text-align: center; color: #d9534f;">Error loading menu data. Please refresh the page.</p>';
+                return;
+            }
+            renderCategories();
         }
 
         function getTableNumberFromURL() {
