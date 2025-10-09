@@ -753,7 +753,7 @@
     <script>
     document.addEventListener('DOMContentLoaded', () => {
 
-        const GST_RATE = 0.05; // 5% GST
+        let GST_RATE = 0.05; // Default 5% GST, will be updated from config
 
         // URLs for your data
         const MENU_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTlM6BGIWdct_szKaONKItArAjOzdEgw-780Qha42rhQNY4_xZ15x8VxzRzzEhlUz8CDGsSY4wbjrip/pub?gid=0&single=true&output=csv';
