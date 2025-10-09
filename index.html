@@ -833,21 +833,28 @@
                 
                 const csvText = await response.text();
                 const lines = csvText.trim().split('\n');
-                lines.shift(); // Remove header
+                const headers = lines[0].split(',').map(h => h.trim());
+                
+                console.log('Config CSV headers:', headers);
+                console.log('Config CSV raw lines:', lines);
                 
                 const configObj = {};
-                lines.forEach(line => {
+                
+                // Parse each line after header
+                for (let i = 1; i < lines.length; i++) {
+                    const line = lines[i];
                     // Handle JSON values with commas by finding first comma only
                     const firstCommaIndex = line.indexOf(',');
-                    if (firstCommaIndex === -1) return;
+                    if (firstCommaIndex === -1) continue;
                     
                     const key = line.substring(0, firstCommaIndex).trim();
                     const value = line.substring(firstCommaIndex + 1).trim();
                     
                     if (key && value) {
                         configObj[key] = value;
+                        console.log(`Config parsed: ${key} = ${value}`);
                     }
-                });
+                }
                 
                 // Parse discount codes JSON
                 if (configObj['discount code']) {
@@ -881,8 +888,10 @@
                     const gstValue = parseFloat(configObj['gst%'].replace(/[^\d.]/g, ''));
                     if (!isNaN(gstValue)) {
                         GST_RATE = gstValue / 100;
-                        console.log('GST rate loaded:', GST_RATE);
+                        console.log('GST rate loaded from CSV:', gstValue + '%', 'Rate:', GST_RATE);
                     }
+                } else {
+                    console.warn('No gst% found in config, using default 5%');
                 }
                 
                 // Parse brand name
@@ -1450,8 +1459,11 @@
             const code = document.getElementById('discount-code-input').value.trim().toUpperCase();
             const messageEl = document.getElementById('discount-message');
             
+            console.log('=== DISCOUNT CODE DEBUG ===');
             console.log('Attempting to apply discount code:', code);
-            console.log('Available discount codes:', config.discountCodes);
+            console.log('Config object:', config);
+            console.log('Config.discountCodes:', config.discountCodes);
+            console.log('Type of discountCodes:', typeof config.discountCodes);
             
             if (!code) {
                 messageEl.style.color = '#d9534f';
@@ -1459,7 +1471,17 @@
                 return;
             }
             
-            if (!config.discountCodes || !config.discountCodes[code]) {
+            // Check if discountCodes exists and is an object
+            if (!config.discountCodes || typeof config.discountCodes !== 'object') {
+                console.error('Discount codes not loaded properly');
+                messageEl.style.color = '#d9534f';
+                messageEl.textContent = 'Discount system unavailable';
+                return;
+            }
+            
+            // Check if the entered code exists
+            if (!config.discountCodes[code]) {
+                console.log('Code not found. Available codes:', Object.keys(config.discountCodes));
                 messageEl.style.color = '#d9534f';
                 messageEl.textContent = 'Invalid discount code';
                 appliedDiscount = null;
@@ -1472,7 +1494,8 @@
             const discountInfo = config.discountCodes[code];
             messageEl.style.color = '#25D366';
             messageEl.textContent = `✓ ${discountInfo.discount} discount applied!`;
-            console.log('Discount applied:', appliedDiscount, discountInfo);
+            console.log('Discount applied successfully:', appliedDiscount, discountInfo);
+            console.log('=== END DEBUG ===');
             renderCartModal();
             updateCartSummary();
         }
