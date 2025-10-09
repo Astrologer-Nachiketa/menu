@@ -772,6 +772,8 @@
         let userLocation = null;
         let outletOpen = true;
         let searchQuery = '';
+        let brandName = 'Our Menu';
+        let whatsappNumber = '7011847629';
         
         const categoryListUl = document.getElementById('category-list-ul');
         const itemListMain = document.getElementById('item-list-main');
@@ -872,6 +874,27 @@
                 // Parse delivery radius
                 if (configObj['gps coordinate']) {
                     configObj.deliveryRadius = parseFloat(configObj['gps coordinate'].replace(/[^\d.]/g, ''));
+                }
+                
+                // Parse GST rate
+                if (configObj['gst%']) {
+                    const gstValue = parseFloat(configObj['gst%'].replace(/[^\d.]/g, ''));
+                    if (!isNaN(gstValue)) {
+                        GST_RATE = gstValue / 100;
+                        console.log('GST rate loaded:', GST_RATE);
+                    }
+                }
+                
+                // Parse brand name
+                if (configObj['brand']) {
+                    brandName = configObj['brand'];
+                    console.log('Brand name loaded:', brandName);
+                }
+                
+                // Parse WhatsApp number
+                if (configObj['whatsapp']) {
+                    whatsappNumber = configObj['whatsapp'].replace(/[^\d]/g, '');
+                    console.log('WhatsApp number loaded:', whatsappNumber);
                 }
                 
                 console.log('Full config loaded:', configObj);
@@ -1046,6 +1069,12 @@
             console.log("Loading configuration...");
             config = await fetchConfig();
             console.log("Config loaded:", config);
+            
+            // Update header with brand name
+            document.querySelector('.header h1').innerHTML = `${brandName} <span id="table-number-display"></span>`;
+            if (tableNumber) {
+                document.getElementById('table-number-display').textContent = `- Table ${tableNumber}`;
+            }
             
             // Check outlet status
             const statusCheck = checkOutletStatus();
@@ -1300,10 +1329,11 @@
             });
 
             const { subtotal, discount, gst, grandTotal } = calculateTotals();
+            const gstPercent = (GST_RATE * 100).toFixed(0);
             cartTotalsSummary.innerHTML = `
                 <div class="totals-row"><span>Subtotal</span><span>₹${subtotal.toFixed(2)}</span></div>
                 ${discount > 0 ? `<div class="totals-row" style="color: #25D366;"><span>Discount (${appliedDiscount})</span><span>-₹${discount.toFixed(2)}</span></div>` : ''}
-                <div class="totals-row"><span>GST (5%)</span><span>₹${gst.toFixed(2)}</span></div>
+                <div class="totals-row"><span>GST (${gstPercent}%)</span><span>₹${gst.toFixed(2)}</span></div>
                 <div class="totals-row grand-total"><span>Grand Total</span><span>₹${grandTotal.toFixed(2)}</span></div>
             `;
             cartModalBody.querySelectorAll('.cart-edit-btn').forEach(btn => {
@@ -1399,12 +1429,13 @@
             });
 
             const { subtotal, discount, gst, grandTotal } = calculateTotals();
+            const gstPercent = (GST_RATE * 100).toFixed(0);
             message += `\n-----------------------------------\n`;
             message += `*Subtotal:* ₹${subtotal.toFixed(2)}\n`;
             if (discount > 0) {
                 message += `*Discount (${appliedDiscount}):* -₹${discount.toFixed(2)}\n`;
             }
-            message += `*GST (5%):* ₹${gst.toFixed(2)}\n`;
+            message += `*GST (${gstPercent}%):* ₹${gst.toFixed(2)}\n`;
             message += `*Grand Total: ₹${grandTotal.toFixed(2)}*\n`;
             message += `-----------------------------------\n`;
 
@@ -1419,6 +1450,9 @@
             const code = document.getElementById('discount-code-input').value.trim().toUpperCase();
             const messageEl = document.getElementById('discount-message');
             
+            console.log('Attempting to apply discount code:', code);
+            console.log('Available discount codes:', config.discountCodes);
+            
             if (!code) {
                 messageEl.style.color = '#d9534f';
                 messageEl.textContent = 'Please enter a discount code';
@@ -1430,6 +1464,7 @@
                 messageEl.textContent = 'Invalid discount code';
                 appliedDiscount = null;
                 renderCartModal();
+                updateCartSummary();
                 return;
             }
             
@@ -1437,7 +1472,9 @@
             const discountInfo = config.discountCodes[code];
             messageEl.style.color = '#25D366';
             messageEl.textContent = `✓ ${discountInfo.discount} discount applied!`;
+            console.log('Discount applied:', appliedDiscount, discountInfo);
             renderCartModal();
+            updateCartSummary();
         }
 
         custModalOverlay.addEventListener('click', (e) => { if (e.target === custModalOverlay) closeCustomizationModal(); });
@@ -1448,6 +1485,16 @@
             renderCartModal();
             cartModalOverlay.classList.add('visible');
         });
+        
+        // Apply discount code button handler
+        const applyDiscountBtn = document.getElementById('apply-discount-btn');
+        if (applyDiscountBtn) {
+            applyDiscountBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                applyDiscountCode();
+            });
+        }
 
         sendWhatsappBtn.addEventListener('click', async () => {
             // Show loading state
@@ -1502,7 +1549,7 @@
                 
                 const message = generateWhatsAppMessage();
                 if (message) {
-                    window.open(`https://api.whatsapp.com/send?phone=7011847629&text=${message}`, '_blank');
+                    window.open(`https://api.whatsapp.com/send?phone=${whatsappNumber}&text=${message}`, '_blank');
                 }
                 
                 // Reset UI
@@ -1529,6 +1576,9 @@
                 applyDiscountCode();
             }
         });
+        
+        // Handle Apply button click via event delegation
+        document.getElementById('apply-discount-btn').addEventListener('click', applyDiscountCode);
 
         // Search functionality
         searchInput.addEventListener('input', (e) => {
