@@ -897,9 +897,9 @@
                     configObj.deliveryRadius = parseFloat(configObj['gps coordinate'].replace(/[^\d.]/g, ''));
                 }
                 
-                // Parse GST rate
-                if (configObj['gst%']) {
-                    const gstStr = configObj['gst%'].toString();
+                // Parse GST rate - check both 'gst%' and 'gst' keys
+                if (configObj['gst%'] || configObj['gst']) {
+                    const gstStr = (configObj['gst%'] || configObj['gst']).toString();
                     console.log('Raw GST string from CSV:', gstStr);
                     const gstValue = parseFloat(gstStr.replace(/[^\d.]/g, ''));
                     console.log('Parsed GST value:', gstValue);
@@ -910,7 +910,7 @@
                         console.warn('Invalid GST value, using default 5%');
                     }
                 } else {
-                    console.warn('No gst% key found in config. Available keys:', Object.keys(configObj));
+                    console.warn('No gst% or gst key found in config. Available keys:', Object.keys(configObj));
                 }
                 
                 // Parse brand name
