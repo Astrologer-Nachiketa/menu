@@ -899,7 +899,10 @@
                 
                 // Parse GST rate
                 if (configObj['gst%']) {
-                    const gstValue = parseFloat(configObj['gst%'].replace(/[^\d.]/g, ''));
+                    const gstStr = configObj['gst%'].toString();
+                    console.log('Raw GST string from CSV:', gstStr);
+                    const gstValue = parseFloat(gstStr.replace(/[^\d.]/g, ''));
+                    console.log('Parsed GST value:', gstValue);
                     if (!isNaN(gstValue) && gstValue > 0) {
                         GST_RATE = gstValue / 100;
                         console.log('✓ GST rate loaded from CSV:', gstValue + '%', '(Rate:', GST_RATE + ')');
@@ -907,7 +910,7 @@
                         console.warn('Invalid GST value, using default 5%');
                     }
                 } else {
-                    console.warn('No gst% found in config, using default 5%');
+                    console.warn('No gst% key found in config. Available keys:', Object.keys(configObj));
                 }
                 
                 // Parse brand name
@@ -1510,8 +1513,23 @@
 
             const generalInstructions = document.getElementById('general-instructions').value.trim();
             if (generalInstructions) {
-                message += `\n*General Instructions:*\n_${generalInstructions}_`;
+                message += `\n*General Instructions:*\n_${generalInstructions}_\n`;
             }
+            
+            // Add location information
+            if (userLocation && config.outletLocation) {
+                const distance = calculateDistance(
+                    userLocation.lat,
+                    userLocation.lng,
+                    config.outletLocation.lat,
+                    config.outletLocation.lng
+                );
+                
+                message += `\n📍 *Location Details:*\n`;
+                message += `Customer Location: https://www.google.com/maps/?q=${userLocation.lat},${userLocation.lng}\n`;
+                message += `Distance from cafe: ${distance.toFixed(2)} km\n`;
+            }
+            
             return encodeURIComponent(message);
         }
 
