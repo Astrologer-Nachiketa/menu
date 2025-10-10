@@ -748,6 +748,31 @@
                 </div>
             </div>
         </div>
+        
+        <div class="modal-overlay" id="confirmation-modal-overlay">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3>⚠️ Confirm Your Order</h3>
+                    <span class="close-btn" id="close-confirmation-modal">&times;</span>
+                </div>
+                <div class="modal-body" id="confirmation-modal-body" style="padding: 20px;">
+                    <div id="confirmation-loading" style="text-align: center; padding: 40px 20px;">
+                        <div style="font-size: 3em; margin-bottom: 15px;">⏳</div>
+                        <p style="color: #666; font-size: 1.1em;">Verifying order details...</p>
+                        <p style="color: #999; font-size: 0.9em; margin-top: 10px;">Checking outlet status, location, and discount codes</p>
+                    </div>
+                    <div id="confirmation-content" style="display: none;"></div>
+                </div>
+                <div class="modal-footer" style="justify-content: center; padding: 20px;">
+                    <button id="confirm-send-btn" style="display: none; background: #25D366; color: white; border: none; padding: 14px 32px; border-radius: 30px; font-weight: 700; cursor: pointer; font-size: 1.05em; min-height: 52px;">
+                        <span>✓</span> Confirm & Send Order
+                    </button>
+                    <button id="cancel-order-btn" style="display: none; background: #d9534f; color: white; border: none; padding: 14px 32px; border-radius: 30px; font-weight: 700; cursor: pointer; font-size: 1.05em; min-height: 52px; margin-left: 10px;">
+                        <span>✗</span> Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -773,6 +798,7 @@
         let appliedDiscount = null;
         let userLocation = null;
         let outletOpen = true;
+        let outletClosedReason = null;
         let searchQuery = '';
         let brandName = 'Our Menu';
         let whatsappNumber = '7011847629';
@@ -794,6 +820,10 @@
         const closeCartModalBtn = document.getElementById('close-cart-modal');
         const sendWhatsappBtn = document.getElementById('send-whatsapp-btn');
         const viewOrderBtn = document.getElementById('view-order-btn');
+        
+        const confirmationModalOverlay = document.getElementById('confirmation-modal-overlay');
+        const confirmationModalBody = document.getElementById('confirmation-modal-body');
+        const closeConfirmationModalBtn = document.getElementById('close-confirmation-modal');
 
         async function fetchAndParseCSV(url) {
             try {
@@ -1108,13 +1138,13 @@
 
         function showClosedOverlay(reason) {
             const overlay = document.createElement('div');
+            overlay.id = 'closed-overlay';
             overlay.style.cssText = `
                 position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0, 0, 0, 0.95);
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: rgba(0, 0, 0, 0.9);
                 z-index: 9999;
                 display: flex;
                 flex-direction: column;
@@ -1122,15 +1152,18 @@
                 align-items: center;
                 color: white;
                 text-align: center;
-                padding: 20px;
+                padding: 30px;
+                border-radius: 50%;
+                width: 200px;
+                height: 200px;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+                pointer-events: none;
             `;
             overlay.innerHTML = `
-                <div style="font-size: 4em; margin-bottom: 20px;">🔒</div>
-                <h2 style="font-size: 1.8em; margin-bottom: 15px;">Outlet Closed</h2>
-                <p style="font-size: 1.2em; max-width: 400px;">${reason}</p>
+                <div style="font-size: 3em; margin-bottom: 10px;">🔒</div>
+                <div style="font-size: 0.9em; font-weight: 600; line-height: 1.3;">${reason}</div>
             `;
             document.body.appendChild(overlay);
-            outletOpen = false;
         }
 
         async function loadMenuData() {
@@ -1148,28 +1181,24 @@
                 document.getElementById('table-number-display').textContent = `- Table ${tableNumber}`;
             }
             
-            // Check outlet status
+            // Check outlet status but don't block UI
             const statusCheck = checkOutletStatus();
             console.log("Status check result:", statusCheck);
             
             if (!statusCheck.open) {
+                outletOpen = false;
+                outletClosedReason = statusCheck.reason;
                 showClosedOverlay(statusCheck.reason);
-                // Still load menu but disable ordering
-                menuItems = await fetchAndParseCSV(MENU_CSV_URL);
-                addons = await fetchAndParseCSV(ADDONS_CSV_URL);
-                return;
             }
             
-            // Check user location
+            // Check user location but don't block UI
             const locationCheck = await checkUserLocation();
             console.log("Location check result:", locationCheck);
             
             if (!locationCheck.allowed) {
+                outletOpen = false;
+                outletClosedReason = locationCheck.reason;
                 showClosedOverlay(locationCheck.reason);
-                // Still load menu but disable ordering
-                menuItems = await fetchAndParseCSV(MENU_CSV_URL);
-                addons = await fetchAndParseCSV(ADDONS_CSV_URL);
-                return;
             }
             
             console.log("Loading menu items...");
@@ -1259,9 +1288,7 @@
                 itemCard.className = 'item-card';
 
                 let actionHtml;
-                if (!outletOpen) {
-                    actionHtml = `<button class="add-button" disabled style="opacity: 0.5; cursor: not-allowed;">Closed</button>`;
-                } else if (itemInCart) {
+                if (itemInCart) {
                     actionHtml = `<div class="item-quantity-control"><button class="decrease-item-qty" data-item-name="${item.Name}">-</button><span>${itemInCart.quantity}</span><button class="increase-item-qty" data-item-name="${item.Name}">+</button></div>`;
                 } else {
                     actionHtml = `<button class="add-button" data-item-name="${item.Name}">ADD</button>`;
@@ -1581,6 +1608,23 @@
         cartModalOverlay.addEventListener('click', (e) => { if (e.target === cartModalOverlay) cartModalOverlay.classList.remove('visible'); });
         closeCartModalBtn.addEventListener('click', () => cartModalOverlay.classList.remove('visible'));
         
+        closeConfirmationModalBtn.addEventListener('click', () => {
+            confirmationModalOverlay.classList.remove('visible');
+        });
+        
+        document.getElementById('cancel-order-btn').addEventListener('click', () => {
+            confirmationModalOverlay.classList.remove('visible');
+        });
+        
+        document.getElementById('confirm-send-btn').addEventListener('click', () => {
+            const message = generateWhatsAppMessage();
+            if (message) {
+                window.open(`https://api.whatsapp.com/send?phone=${whatsappNumber}&text=${message}`, '_blank');
+            }
+            confirmationModalOverlay.classList.remove('visible');
+            cartModalOverlay.classList.remove('visible');
+        });
+        
         viewOrderBtn.addEventListener('click', () => {
             renderCartModal();
             cartModalOverlay.classList.add('visible');
@@ -1597,77 +1641,218 @@
         }
 
         sendWhatsappBtn.addEventListener('click', async () => {
-            // Show loading state
-            const statusDiv = document.getElementById('final-check-status');
-            sendWhatsappBtn.disabled = true;
-            sendWhatsappBtn.style.opacity = '0.6';
-            statusDiv.style.display = 'block';
-            statusDiv.textContent = 'Verifying outlet status...';
+            // Check if outlet is closed
+            if (!outletOpen) {
+                alert(`⚠️ Cannot place order\n\n${outletClosedReason}`);
+                return;
+            }
+            
+            // Open confirmation modal
+            confirmationModalOverlay.classList.add('visible');
+            document.getElementById('confirmation-loading').style.display = 'block';
+            document.getElementById('confirmation-content').style.display = 'none';
+            document.getElementById('confirm-send-btn').style.display = 'none';
+            document.getElementById('cancel-order-btn').style.display = 'none';
             
             try {
-                // Re-fetch config to ensure we have latest data
-                console.log('Re-checking outlet status before placing order...');
+                // Fetch fresh data from all CSVs
+                console.log('Fetching fresh data for order confirmation...');
                 const freshConfig = await fetchConfig();
+                const freshDiscountCodes = await fetchDiscountCodes();
                 
                 // Check outlet status with fresh config
                 const tempConfig = config;
+                const tempDiscountCodes = discountCodes;
                 config = freshConfig;
+                discountCodes = freshDiscountCodes;
+                
                 const statusCheck = checkOutletStatus();
                 const locationCheck = await checkUserLocation();
-                config = tempConfig; // Restore original config
+                
+                // Restore for normal operation
+                config = tempConfig;
+                discountCodes = tempDiscountCodes;
                 
                 console.log('Fresh status check:', statusCheck);
                 console.log('Fresh location check:', locationCheck);
+                console.log('Fresh discount codes:', freshDiscountCodes);
                 
+                // Build confirmation HTML
+                let confirmationHTML = '<div style="max-height: 60vh; overflow-y: auto;">';
+                
+                // Status checks
                 if (!statusCheck.open) {
-                    statusDiv.style.color = '#d9534f';
-                    statusDiv.textContent = statusCheck.reason;
-                    sendWhatsappBtn.disabled = false;
-                    sendWhatsappBtn.style.opacity = '1';
-                    setTimeout(() => {
-                        alert(`Sorry, outlet is now closed:\n${statusCheck.reason}`);
-                        statusDiv.style.display = 'none';
-                    }, 500);
+                    confirmationHTML += `
+                        <div style="background: #fee; border-left: 4px solid #d9534f; padding: 15px; margin-bottom: 15px; border-radius: 8px;">
+                            <h4 style="color: #d9534f; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                                <span>🔒</span> Outlet Closed
+                            </h4>
+                            <p style="color: #666; font-size: 0.95em; margin: 0;">${statusCheck.reason}</p>
+                        </div>
+                    `;
+                    document.getElementById('confirmation-loading').style.display = 'none';
+                    document.getElementById('confirmation-content').innerHTML = confirmationHTML + '</div>';
+                    document.getElementById('confirmation-content').style.display = 'block';
+                    document.getElementById('cancel-order-btn').style.display = 'inline-block';
                     return;
                 }
                 
                 if (!locationCheck.allowed) {
-                    statusDiv.style.color = '#d9534f';
-                    statusDiv.textContent = locationCheck.reason;
-                    sendWhatsappBtn.disabled = false;
-                    sendWhatsappBtn.style.opacity = '1';
-                    setTimeout(() => {
-                        alert(`Sorry, you are outside delivery range:\n${locationCheck.reason}`);
-                        statusDiv.style.display = 'none';
-                    }, 500);
+                    confirmationHTML += `
+                        <div style="background: #fee; border-left: 4px solid #d9534f; padding: 15px; margin-bottom: 15px; border-radius: 8px;">
+                            <h4 style="color: #d9534f; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                                <span>📍</span> Outside Delivery Range
+                            </h4>
+                            <p style="color: #666; font-size: 0.95em; margin: 0;">${locationCheck.reason}</p>
+                        </div>
+                    `;
+                    document.getElementById('confirmation-loading').style.display = 'none';
+                    document.getElementById('confirmation-content').innerHTML = confirmationHTML + '</div>';
+                    document.getElementById('confirmation-content').style.display = 'block';
+                    document.getElementById('cancel-order-btn').style.display = 'inline-block';
                     return;
                 }
                 
-                // All checks passed
-                statusDiv.style.color = '#25D366';
-                statusDiv.textContent = 'Verified! Opening WhatsApp...';
+                // Outlet is open
+                confirmationHTML += `
+                    <div style="background: #efe; border-left: 4px solid #25D366; padding: 15px; margin-bottom: 15px; border-radius: 8px;">
+                        <h4 style="color: #25D366; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                            <span>✓</span> Outlet Open
+                        </h4>
+                        <p style="color: #666; font-size: 0.9em; margin: 0;">Open from ${freshConfig['on time']} to ${freshConfig['off time']}</p>
+                    </div>
+                `;
                 
-                const message = generateWhatsAppMessage();
-                if (message) {
-                    window.open(`https://api.whatsapp.com/send?phone=${whatsappNumber}&text=${message}`, '_blank');
+                // Location info
+                if (userLocation && freshConfig.outletLocation) {
+                    const distance = calculateDistance(
+                        userLocation.lat,
+                        userLocation.lng,
+                        freshConfig.outletLocation.lat,
+                        freshConfig.outletLocation.lng
+                    );
+                    confirmationHTML += `
+                        <div style="background: #e8f5e9; border-left: 4px solid #4caf50; padding: 15px; margin-bottom: 15px; border-radius: 8px;">
+                            <h4 style="color: #4caf50; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                                <span>📍</span> Delivery Location
+                            </h4>
+                            <p style="color: #666; font-size: 0.9em; margin: 5px 0;">Distance: <strong>${distance.toFixed(2)} km</strong></p>
+                            <p style="color: #666; font-size: 0.9em; margin: 5px 0;">Delivery radius: ${freshConfig.deliveryRadius} km</p>
+                            <a href="https://www.google.com/maps/?q=${userLocation.lat},${userLocation.lng}" target="_blank" style="color: #1976d2; font-size: 0.85em; text-decoration: none;">View on Map →</a>
+                        </div>
+                    `;
                 }
                 
-                // Reset UI
-                setTimeout(() => {
-                    sendWhatsappBtn.disabled = false;
-                    sendWhatsappBtn.style.opacity = '1';
-                    statusDiv.style.display = 'none';
-                }, 2000);
+                // Discount verification
+                if (appliedDiscount) {
+                    const freshDiscountInfo = freshDiscountCodes[appliedDiscount];
+                    if (freshDiscountInfo) {
+                        confirmationHTML += `
+                            <div style="background: #fff3e0; border-left: 4px solid #ff9800; padding: 15px; margin-bottom: 15px; border-radius: 8px;">
+                                <h4 style="color: #ff9800; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                                    <span>🎟️</span> Discount Code: ${appliedDiscount}
+                                </h4>
+                                <p style="color: #666; font-size: 0.9em; margin: 5px 0;">Discount: <strong>${freshDiscountInfo.discount}</strong></p>
+                                <p style="color: #666; font-size: 0.9em; margin: 5px 0;">Applied to: <strong>${freshDiscountInfo.category}</strong></p>
+                            </div>
+                        `;
+                    } else {
+                        confirmationHTML += `
+                            <div style="background: #fee; border-left: 4px solid #d9534f; padding: 15px; margin-bottom: 15px; border-radius: 8px;">
+                                <h4 style="color: #d9534f; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                                    <span>⚠️</span> Invalid Discount Code
+                                </h4>
+                                <p style="color: #666; font-size: 0.9em; margin: 0;">Code "${appliedDiscount}" is no longer valid</p>
+                            </div>
+                        `;
+                    }
+                }
+                
+                // Order summary
+                confirmationHTML += `<h4 style="margin: 20px 0 10px 0; color: #333; border-bottom: 2px solid #eee; padding-bottom: 8px;">📋 Order Summary</h4>`;
+                cart.forEach(item => {
+                    confirmationHTML += `
+                        <div style="padding: 10px 0; border-bottom: 1px solid #f0f0f0;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                <strong style="color: #333;">${item.quantity}x ${item.Name}</strong>
+                                <strong style="color: var(--primary-color);">₹${item.subtotal.toFixed(2)}</strong>
+                            </div>
+                    `;
+                    if (item.selectedAddons.length > 0) {
+                        confirmationHTML += '<div style="font-size: 0.85em; color: #666; margin-left: 15px;">';
+                        item.selectedAddons.forEach(addon => {
+                            confirmationHTML += `• ${addon.name}<br>`;
+                        });
+                        confirmationHTML += '</div>';
+                    }
+                    if (item.instructions) {
+                        confirmationHTML += `<div style="font-size: 0.85em; color: #d9534f; font-style: italic; margin-left: 15px;">"${item.instructions}"</div>`;
+                    }
+                    confirmationHTML += '</div>';
+                });
+                
+                // Calculate totals with fresh GST from fresh config
+                const { subtotal, discount, gst, grandTotal } = calculateTotals();
+                const freshGstRate = freshConfig['gst'] || freshConfig['gst%'] || '5%';
+                
+                confirmationHTML += `
+                    <div style="background: #fafafa; padding: 15px; margin-top: 15px; border-radius: 8px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span style="color: #666;">Subtotal:</span>
+                            <span style="color: #333; font-weight: 600;">₹${subtotal.toFixed(2)}</span>
+                        </div>
+                `;
+                
+                if (discount > 0) {
+                    confirmationHTML += `
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px; color: #25D366;">
+                            <span>Discount (${appliedDiscount}):</span>
+                            <span style="font-weight: 600;">-₹${discount.toFixed(2)}</span>
+                        </div>
+                    `;
+                }
+                
+                confirmationHTML += `
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span style="color: #666;">GST (${freshGstRate}):</span>
+                            <span style="color: #333; font-weight: 600;">₹${gst.toFixed(2)}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding-top: 12px; border-top: 2px solid #ddd; margin-top: 8px;">
+                            <span style="color: #333; font-size: 1.1em; font-weight: 700;">Grand Total:</span>
+                            <span style="color: var(--primary-color); font-size: 1.2em; font-weight: 700;">₹${grandTotal.toFixed(2)}</span>
+                        </div>
+                    </div>
+                `;
+                
+                const generalInstructions = document.getElementById('general-instructions').value.trim();
+                if (generalInstructions) {
+                    confirmationHTML += `
+                        <div style="margin-top: 15px; padding: 12px; background: #fff8e1; border-radius: 8px; border-left: 4px solid #ffc107;">
+                            <strong style="color: #f57c00; font-size: 0.9em;">General Instructions:</strong>
+                            <p style="margin: 8px 0 0 0; color: #666; font-size: 0.9em; font-style: italic;">"${generalInstructions}"</p>
+                        </div>
+                    `;
+                }
+                
+                confirmationHTML += '</div>';
+                
+                // Show confirmation
+                document.getElementById('confirmation-loading').style.display = 'none';
+                document.getElementById('confirmation-content').innerHTML = confirmationHTML;
+                document.getElementById('confirmation-content').style.display = 'block';
+                document.getElementById('confirm-send-btn').style.display = 'inline-block';
+                document.getElementById('cancel-order-btn').style.display = 'inline-block';
                 
             } catch (error) {
-                console.error('Error during final verification:', error);
-                statusDiv.style.color = '#d9534f';
-                statusDiv.textContent = 'Verification failed. Please try again.';
-                sendWhatsappBtn.disabled = false;
-                sendWhatsappBtn.style.opacity = '1';
-                setTimeout(() => {
-                    statusDiv.style.display = 'none';
-                }, 3000);
+                console.error('Error during confirmation:', error);
+                document.getElementById('confirmation-loading').innerHTML = `
+                    <div style="color: #d9534f;">
+                        <div style="font-size: 3em; margin-bottom: 15px;">⚠️</div>
+                        <p style="font-size: 1.1em;">Error loading confirmation</p>
+                        <p style="font-size: 0.9em; color: #999;">Please try again</p>
+                    </div>
+                `;
+                document.getElementById('cancel-order-btn').style.display = 'inline-block';
             }
         });
 
