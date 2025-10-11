@@ -719,6 +719,86 @@
             -webkit-user-select: none;
             user-select: none;
         }
+        
+        /* Description Modal Styles */
+        .description-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            max-width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            z-index: 250;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            animation: fadeIn 0.2s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -48%);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%);
+            }
+        }
+        
+        .description-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 240;
+            display: none;
+        }
+        
+        .description-modal-overlay.visible {
+            display: block;
+        }
+        
+        .description-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+        }
+        
+        .description-title {
+            font-size: 1.1em;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        
+        .description-close {
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            color: #888;
+            cursor: pointer;
+            min-width: 30px;
+            min-height: 30px;
+        }
+        
+        .description-content {
+            color: #333;
+            line-height: 1.6;
+            font-size: 0.95em;
+        }
+        
+        .description-content img {
+            width: 100%;
+            border-radius: 12px;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
@@ -797,6 +877,16 @@
                 </div>
             </div>
         </div>
+        
+        <div class="description-modal-overlay" id="description-modal-overlay">
+            <div class="description-modal" id="description-modal">
+                <div class="description-header">
+                    <div class="description-title" id="description-title"></div>
+                    <button class="description-close" id="description-close">&times;</button>
+                </div>
+                <div class="description-content" id="description-content"></div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -848,6 +938,12 @@
         const confirmationModalOverlay = document.getElementById('confirmation-modal-overlay');
         const confirmationModalBody = document.getElementById('confirmation-modal-body');
         const closeConfirmationModalBtn = document.getElementById('close-confirmation-modal');
+        
+        const descriptionModalOverlay = document.getElementById('description-modal-overlay');
+        const descriptionModal = document.getElementById('description-modal');
+        const descriptionTitle = document.getElementById('description-title');
+        const descriptionContent = document.getElementById('description-content');
+        const descriptionClose = document.getElementById('description-close');
 
         async function fetchAndParseCSV(url) {
             try {
@@ -1288,6 +1384,31 @@
             });
         }
 
+        function isImageUrl(text) {
+            if (!text) return false;
+            const imageExtensions = /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i;
+            const urlPattern = /^https?:\/\/.+/i;
+            return urlPattern.test(text) && (imageExtensions.test(text) || text.includes('drive.google.com') || text.includes('imgur.com') || text.includes('cloudinary.com'));
+        }
+
+        function showDescription(item) {
+            if (!item.description || item.description.trim() === '') return;
+            
+            descriptionTitle.textContent = item.Name;
+            
+            if (isImageUrl(item.description)) {
+                descriptionContent.innerHTML = `<img src="${item.description}" alt="${item.Name}" onerror="this.style.display='none'; this.parentElement.innerHTML='<p style=color:#d9534f;>Unable to load image</p>'">`;
+            } else {
+                descriptionContent.innerHTML = `<p>${item.description}</p>`;
+            }
+            
+            descriptionModalOverlay.classList.add('visible');
+        }
+
+        function closeDescriptionModal() {
+            descriptionModalOverlay.classList.remove('visible');
+        }
+
         function renderCategories() {
             const filteredItems = getFilteredItems();
             
@@ -1341,8 +1462,23 @@
                 } else {
                     actionHtml = `<button class="add-button" data-item-name="${item.Name}">ADD</button>`;
                 }
+                
+                // Add info icon if description exists
+                const hasDescription = item.description && item.description.trim() !== '';
+                console.log(`Item: ${item.Name}, Has description: ${hasDescription}, Description: "${item.description}"`);
+                const infoIconHtml = hasDescription ? `<button class="info-icon" data-item-name="${item.Name}" title="View description">i</button>` : '';
 
-                itemCard.innerHTML = `<div class="item-details"><div class="item-name"><div class="attribute-icon ${getAttributeClass(item.Attributes)}"></div>${item.Name}</div><div class="item-price">₹${item.Price}</div></div><div class="item-action-container">${actionHtml}</div>`;
+                itemCard.innerHTML = `
+                    <div class="item-details">
+                        <div class="item-name">
+                            <div class="attribute-icon ${getAttributeClass(item.Attributes)}"></div>
+                            <span style="flex: 1;">${item.Name}</span>
+                            ${infoIconHtml}
+                        </div>
+                        <div class="item-price">₹${item.Price}</div>
+                    </div>
+                    <div class="item-action-container">${actionHtml}</div>
+                `;
                 itemListMain.appendChild(itemCard);
             });
             
@@ -1356,6 +1492,17 @@
                         cart.push({ ...item, quantity: 1, selectedAddons: [], instructions: '', subtotal: item.Price });
                         updateCartSummary();
                         renderItems(activeCategory);
+                    }
+                });
+            });
+            
+            itemListMain.querySelectorAll('.info-icon').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const itemName = e.target.dataset.itemName;
+                    const item = menuItems.find(i => i.Name === itemName);
+                    if (item) {
+                        showDescription(item);
                     }
                 });
             });
@@ -1655,6 +1802,9 @@
         custModalOverlay.addEventListener('click', (e) => { if (e.target === custModalOverlay) closeCustomizationModal(); });
         cartModalOverlay.addEventListener('click', (e) => { if (e.target === cartModalOverlay) cartModalOverlay.classList.remove('visible'); });
         confirmationModalOverlay.addEventListener('click', (e) => { if (e.target === confirmationModalOverlay) confirmationModalOverlay.classList.remove('visible'); });
+        descriptionModalOverlay.addEventListener('click', (e) => { if (e.target === descriptionModalOverlay) closeDescriptionModal(); });
+        
+        descriptionClose.addEventListener('click', closeDescriptionModal);
         closeCartModalBtn.addEventListener('click', () => cartModalOverlay.classList.remove('visible'));
         
         closeConfirmationModalBtn.addEventListener('click', () => {
