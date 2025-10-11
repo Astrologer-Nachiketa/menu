@@ -1130,7 +1130,20 @@
                     },
                     (error) => {
                         console.log('Location access denied or unavailable:', error);
-                        resolve({ allowed: true }); // Allow ordering if location denied
+                        // If GPS check is 'yes', require location
+                        if (config['gps check'] && config['gps check'].toLowerCase() === 'yes') {
+                            resolve({ 
+                                allowed: false, 
+                                reason: 'Location permission required. Please enable location access and refresh the page.' 
+                            });
+                        } else {
+                            resolve({ allowed: true }); // Allow ordering if location denied and GPS not mandatory
+                        }
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 0
                     }
                 );
             });
@@ -1231,10 +1244,21 @@
         }
 
         function getFilteredItems() {
-            if (!searchQuery) return menuItems;
+            if (!searchQuery) {
+                // Filter out items with status FALSE
+                return menuItems.filter(item => {
+                    const status = (item.status || '').toString().toUpperCase();
+                    return status !== 'FALSE';
+                });
+            }
             
             const query = searchQuery.toLowerCase();
             return menuItems.filter(item => {
+                // First check status
+                const status = (item.status || '').toString().toUpperCase();
+                if (status === 'FALSE') return false;
+                
+                // Then check search query
                 return item.Name.toLowerCase().includes(query) ||
                        item.Category.toLowerCase().includes(query);
             });
@@ -1606,6 +1630,7 @@
 
         custModalOverlay.addEventListener('click', (e) => { if (e.target === custModalOverlay) closeCustomizationModal(); });
         cartModalOverlay.addEventListener('click', (e) => { if (e.target === cartModalOverlay) cartModalOverlay.classList.remove('visible'); });
+        confirmationModalOverlay.addEventListener('click', (e) => { if (e.target === confirmationModalOverlay) confirmationModalOverlay.classList.remove('visible'); });
         closeCartModalBtn.addEventListener('click', () => cartModalOverlay.classList.remove('visible'));
         
         closeConfirmationModalBtn.addEventListener('click', () => {
@@ -1668,6 +1693,78 @@
                 
                 const statusCheck = checkOutletStatus();
                 const locationCheck = await checkUserLocation();
+                
+                // If GPS check is 'yes', get fresh location at confirmation time
+                if (freshConfig['gps check'] && freshConfig['gps check'].toLowerCase() === 'yes') {
+                    console.log('GPS check is mandatory, requesting fresh location...');
+                    // Force fresh location check with high accuracy
+                    const freshLocationCheck = await new Promise((resolve) => {
+                        navigator.geolocation.getCurrentPosition(
+                            (position) => {
+                                const freshUserLocation = {
+                                    lat: position.coords.latitude,
+                                    lng: position.coords.longitude
+                                };
+                                
+                                console.log("Fresh user location at confirmation:", freshUserLocation);
+                                
+                                const distance = calculateDistance(
+                                    freshUserLocation.lat,
+                                    freshUserLocation.lng,
+                                    freshConfig.outletLocation.lat,
+                                    freshConfig.outletLocation.lng
+                                );
+                                
+                                console.log("Fresh distance:", distance.toFixed(2), "km");
+                                
+                                if (distance > freshConfig.deliveryRadius) {
+                                    resolve({ 
+                                        allowed: false, 
+                                        location: freshUserLocation,
+                                        distance: distance,
+                                        reason: `You are ${distance.toFixed(1)}km away. We deliver within ${freshConfig.deliveryRadius}km.` 
+                                    });
+                                } else {
+                                    resolve({ allowed: true, location: freshUserLocation, distance: distance });
+                                }
+                            },
+                            (error) => {
+                                console.error('Fresh location access error:', error);
+                                resolve({ 
+                                    allowed: false, 
+                                    reason: 'Unable to verify your location. Please enable location access and try again.' 
+                                });
+                            },
+                            {
+                                enableHighAccuracy: true,
+                                timeout: 10000,
+                                maximumAge: 0
+                            }
+                        );
+                    });
+                    
+                    // Update user location if we got fresh one
+                    if (freshLocationCheck.location) {
+                        userLocation = freshLocationCheck.location;
+                    }
+                    
+                    // Use fresh location check result
+                    if (!freshLocationCheck.allowed) {
+                        confirmationHTML += `
+                            <div style="background: #fee; border-left: 4px solid #d9534f; padding: 15px; margin-bottom: 15px; border-radius: 8px;">
+                                <h4 style="color: #d9534f; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                                    <span>📍</span> Location Verification Failed
+                                </h4>
+                                <p style="color: #666; font-size: 0.95em; margin: 0;">${freshLocationCheck.reason}</p>
+                            </div>
+                        `;
+                        document.getElementById('confirmation-loading').style.display = 'none';
+                        document.getElementById('confirmation-content').innerHTML = confirmationHTML + '</div>';
+                        document.getElementById('confirmation-content').style.display = 'block';
+                        document.getElementById('cancel-order-btn').style.display = 'inline-block';
+                        return;
+                    }
+                }
                 
                 // Restore for normal operation
                 config = tempConfig;
