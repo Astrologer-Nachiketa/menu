@@ -1501,6 +1501,8 @@
 
         function closeDescriptionModal() {
             descriptionModalOverlay.classList.remove('visible');
+            // Stop any playing videos by clearing the content
+            descriptionContent.innerHTML = '';
         }
 
         function renderCategories() {
